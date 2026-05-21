@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Amore Event Planner</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="eyebrow">Amore</div>
+      <h1>Event Planner</h1>
+      <p>Create events quickly and publish them to the rep portal.</p>
+    </header>
+
+    <section class="card">
+      <form id="eventForm">
+        <label>
+          Brand
+          <select id="brand" required>
+            <option value="">Loading brands...</option>
+          </select>
+        </label>
+
+        <label>
+          Store
+          <input id="storeSearch" type="text" placeholder="Start typing store name..." required />
+        </label>
+
+        <div id="selectedStore" class="storeBox hidden"></div>
+
+        <div class="grid2">
+          <label>
+            Event Date
+            <input id="eventDate" type="date" required />
+          </label>
+
+          <label>
+            Hourly Rate
+            <input id="hourlyRate" type="number" min="0" step="1" placeholder="35" required />
+          </label>
+        </div>
+
+        <div class="grid2">
+          <label>
+            Start Time
+            <input id="startTime" type="time" required />
+          </label>
+
+          <label>
+            End Time
+            <input id="endTime" type="time" required />
+          </label>
+        </div>
+
+        <label>
+          Details / Notes
+          <textarea id="details" rows="4" placeholder="Optional event notes..."></textarea>
+        </label>
+
+        <div id="message" class="message hidden"></div>
+
+        <div class="actions">
+          <button type="button" id="draftBtn" class="secondary">Save as Draft</button>
+          <button type="button" id="publishBtn" class="primary">Publish to Rep Portal</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

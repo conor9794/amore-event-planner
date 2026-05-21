@@ -1,0 +1,15 @@
+{
+  "name": "amore-event-planner",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo \"Static site - no build step\""
+  },
+  "dependencies": {
+    "airtable": "^0.12.2"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.38.1"
+  }
+}
