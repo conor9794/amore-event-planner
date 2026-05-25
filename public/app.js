@@ -118,7 +118,7 @@ async function submitEvent(publish) {
     eventDate: $("eventDate").value,
     startTime: $("startTime").value,
     endTime: $("endTime").value,
-    hourlyRate: Number($("hourlyRate").value),
+    hourlyRate: $("hourlyRate").value.trim(),
     details: $("details").value.trim()
   };
 
