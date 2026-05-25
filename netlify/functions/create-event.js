@@ -1,4 +1,4 @@
-const { getBase, TABLES } = require("./_airtable");
+const { TABLES, listRecords, createRecord } = require("./_airtable");
 
 function escapeFormulaString(value) {
   return String(value || "").replace(/'/g, "\\'");
@@ -8,21 +8,19 @@ function isoDateTime(date, time) {
   return `${date}T${time}:00`;
 }
 
-async function findOrCreateStore(base, store) {
+async function findOrCreateStore(store) {
   const placeId = store.googlePlaceId;
 
   if (placeId) {
-    const existing = await base(TABLES.STORES)
-      .select({
-        maxRecords: 1,
-        filterByFormula: `{Google Place ID} = '${escapeFormulaString(placeId)}'`
-      })
-      .firstPage();
+    const existing = await listRecords(TABLES.STORES, {
+      maxRecords: "1",
+      filterByFormula: `{Google Place ID} = '${escapeFormulaString(placeId)}'`
+    });
 
     if (existing.length > 0) return existing[0].id;
   }
 
-  const created = await base(TABLES.STORES).create({
+  const created = await createRecord(TABLES.STORES, {
     "Store Name": store.name,
     "Address": store.address,
     "State": store.state,
@@ -65,12 +63,10 @@ exports.handler = async (event) => {
       };
     }
 
-    const base = getBase();
-    const storeRecordId = await findOrCreateStore(base, store);
-
+    const storeRecordId = await findOrCreateStore(store);
     const eventName = `${brandName} @ ${store.name}`;
 
-    const createdEvent = await base(TABLES.EVENTS).create({
+    const createdEvent = await createRecord(TABLES.EVENTS, {
       "Event Name": eventName,
       "Brand": [brandRecordId],
       "Store": [storeRecordId],
