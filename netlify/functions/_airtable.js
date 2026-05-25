@@ -77,4 +77,12 @@ async function createRecord(tableId, fields) {
   return data;
 }
 
-module.exports = { TABLES, airtableUrl, airtableRequest, listRecords, createRecord };
+async function updateRecord(tableId, recordId, fields) {
+  const data = await airtableRequest(`${encodeURIComponent(tableId)}/${recordId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ fields })
+  });
+  return data;
+}
+
+module.exports = { TABLES, airtableUrl, airtableRequest, listRecords, createRecord, updateRecord };
