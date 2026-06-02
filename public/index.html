@@ -11,61 +11,114 @@
     <header>
       <div class="eyebrow">Amore</div>
       <h1>Event Planner</h1>
-      <p>Create events quickly and publish them to the rep portal.</p>
+      <p>Create events, publish them to the rep portal, and assign ambassadors from one mobile page.</p>
     </header>
 
-    <section class="card">
-      <form id="eventForm">
+    <nav class="tabs" aria-label="Planner pages">
+      <button type="button" id="addEventTab" class="tab active">Add Event</button>
+      <button type="button" id="assignTab" class="tab">Assign Ambassador</button>
+    </nav>
+
+    <section id="addEventPage" class="page active">
+      <section class="card">
+        <form id="eventForm">
+          <label>
+            Brand
+            <select id="brand" required>
+              <option value="">Loading brands...</option>
+            </select>
+          </label>
+
+          <label>
+            Store
+            <input id="storeSearch" type="text" placeholder="Start typing store name..." required />
+          </label>
+
+          <div id="selectedStore" class="storeBox hidden"></div>
+
+          <div class="grid2">
+            <label>
+              Event Date
+              <input id="eventDate" type="date" required />
+            </label>
+
+            <label>
+              Hourly Rate
+              <input id="hourlyRate" type="text" placeholder="$30-$35" required />
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Start Time
+              <input id="startTime" type="time" required />
+            </label>
+
+            <label>
+              End Time
+              <input id="endTime" type="time" required />
+            </label>
+          </div>
+
+          <label>
+            Details / Notes
+            <textarea id="details" rows="4" placeholder="Optional event notes..."></textarea>
+          </label>
+
+          <div id="message" class="message hidden"></div>
+
+          <div class="actions">
+            <button type="button" id="draftBtn" class="secondary">Save as Draft</button>
+            <button type="button" id="publishBtn" class="primary">Publish to Rep Portal</button>
+          </div>
+        </form>
+      </section>
+    </section>
+
+    <section id="assignPage" class="page">
+      <section class="card">
+        <div class="sectionIntro">
+          <h2>Assign Ambassador</h2>
+          <p>Create a Booking record for an event. This also checks Send Save the Date by default.</p>
+        </div>
+
         <label>
-          Brand
-          <select id="brand" required>
-            <option value="">Loading brands...</option>
+          Event
+          <select id="assignEvent">
+            <option value="">Loading events...</option>
           </select>
         </label>
 
-        <label>
-          Store
-          <input id="storeSearch" type="text" placeholder="Start typing store name..." required />
-        </label>
+        <div id="eventDetails" class="detailBox hidden"></div>
 
-        <div id="selectedStore" class="storeBox hidden"></div>
-
-        <div class="grid2">
-          <label>
-            Event Date
-            <input id="eventDate" type="date" required />
-          </label>
-
-          <label>
-            Hourly Rate
-            <input id="hourlyRate" type="text" placeholder="$30-$35" required />
-          </label>
-        </div>
-
-        <div class="grid2">
-          <label>
-            Start Time
-            <input id="startTime" type="time" required />
-          </label>
-
-          <label>
-            End Time
-            <input id="endTime" type="time" required />
-          </label>
+        <div id="bookedBox" class="detailBox hidden">
+          <div class="boxTitle">Already Booked</div>
+          <div id="bookedList" class="smallList"></div>
         </div>
 
         <label>
-          Details / Notes
-          <textarea id="details" rows="4" placeholder="Optional event notes..."></textarea>
+          Search Ambassador
+          <input id="ambassadorSearch" type="text" placeholder="Type name or email..." />
         </label>
 
-        <div id="message" class="message hidden"></div>
+        <label>
+          Ambassador
+          <select id="assignAmbassador">
+            <option value="">Loading ambassadors...</option>
+          </select>
+        </label>
 
-        <div class="actions">
-          <button type="button" id="draftBtn" class="secondary">Save as Draft</button>
-          <button type="button" id="publishBtn" class="primary">Publish to Rep Portal</button>
+        <label class="checkboxRow">
+          <input id="sendSaveTheDate" type="checkbox" checked />
+          <span>Send Save the Date after creating booking</span>
+        </label>
+
+        <div id="assignMessage" class="message hidden"></div>
+
+        <div class="actions oneButton">
+          <button type="button" id="createBookingBtn" class="primary">Create Booking</button>
         </div>
-      </form>
+      </section>
     </section>
   </main>
 

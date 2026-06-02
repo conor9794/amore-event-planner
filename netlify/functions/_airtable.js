@@ -1,10 +1,12 @@
-const BASE_ID = process.env.AIRTABLE_BASE_ID || "appqulbpEb4AWfb75";
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
+const BASE_ID = process.env.AIRTABLE_BASE_ID || "appqulbpEb4AWfb75";
 
 const TABLES = {
   BRANDS: process.env.AIRTABLE_BRANDS_TABLE || "tblKvHgYsWiyyUlow",
   STORES: process.env.AIRTABLE_STORES_TABLE || "tblQB27xwvKiVyLWW",
-  EVENTS: process.env.AIRTABLE_EVENTS_TABLE || "tblEpybLYG9dJmtEz"
+  EVENTS: process.env.AIRTABLE_EVENTS_TABLE || "tblEpybLYG9dJmtEz",
+  AMBASSADORS: process.env.AIRTABLE_AMBASSADORS_TABLE || "Ambassadors",
+  BOOKINGS: process.env.AIRTABLE_BOOKINGS_TABLE || "Bookings"
 };
 
 function requireToken() {
@@ -15,7 +17,7 @@ function requireToken() {
 }
 
 function airtableUrl(tableId, params = {}) {
-  const url = new URL(`https://api.airtable.com/v0/${BASE_ID}/${tableId}`);
+  const url = new URL(`https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(tableId)}`);
   Object.entries(params).forEach(([key, value]) => {
     if (Array.isArray(value)) {
       value.forEach((v) => url.searchParams.append(key, v));
@@ -70,7 +72,7 @@ async function listRecords(tableId, params = {}) {
 }
 
 async function createRecord(tableId, fields) {
-  const data = await airtableRequest(tableId, {
+  const data = await airtableRequest(encodeURIComponent(tableId), {
     method: "POST",
     body: JSON.stringify({ fields })
   });
@@ -85,4 +87,8 @@ async function updateRecord(tableId, recordId, fields) {
   return data;
 }
 
-module.exports = { TABLES, airtableUrl, airtableRequest, listRecords, createRecord, updateRecord };
+function escapeFormulaString(value) {
+  return String(value || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+module.exports = { TABLES, airtableUrl, airtableRequest, listRecords, createRecord, updateRecord, escapeFormulaString };

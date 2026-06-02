@@ -40,11 +40,38 @@ h1 {
   font-size: 34px;
 }
 
+h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
 p {
   margin: 0;
   color: var(--muted);
   line-height: 1.4;
 }
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab {
+  background: #f3f4f6;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.tab.active {
+  background: var(--red2);
+  color: white;
+  border-color: var(--red2);
+}
+
+.page { display: none; }
+.page.active { display: block; }
 
 .card {
   background: var(--white);
@@ -52,6 +79,10 @@ p {
   border-radius: 18px;
   padding: 18px;
   box-shadow: 0 8px 28px rgba(0,0,0,.07);
+}
+
+.sectionIntro {
+  margin-bottom: 16px;
 }
 
 label {
@@ -85,6 +116,10 @@ textarea { resize: vertical; }
   margin-top: 12px;
 }
 
+.actions.oneButton {
+  grid-template-columns: 1fr;
+}
+
 button {
   border: 0;
   border-radius: 14px;
@@ -92,6 +127,11 @@ button {
   font-weight: 800;
   font-size: 16px;
   cursor: pointer;
+}
+
+button:disabled {
+  opacity: .65;
+  cursor: not-allowed;
 }
 
 .primary {
@@ -104,7 +144,8 @@ button {
   color: var(--text);
 }
 
-.storeBox {
+.storeBox,
+.detailBox {
   border: 1px solid var(--border);
   background: #f9fafb;
   border-radius: 14px;
@@ -112,6 +153,41 @@ button {
   margin-bottom: 14px;
   color: var(--muted);
   line-height: 1.35;
+}
+
+.detailBox strong,
+.storeBox strong {
+  color: var(--text);
+}
+
+.boxTitle {
+  color: var(--text);
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.smallList {
+  display: grid;
+  gap: 6px;
+}
+
+.smallList .item {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.checkboxRow input {
+  width: auto;
+  margin-top: 2px;
 }
 
 .message {
