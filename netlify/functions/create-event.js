@@ -12,8 +12,56 @@ function normalizeAddress(value) {
     .trim();
 }
 
-function isoDateTime(date, time) {
-  return `${date}T${time}:00`;
+function stateToTimeZone(state) {
+  const s = String(state || "").trim().toUpperCase();
+  const eastern = new Set(["CT", "DE", "FL", "GA", "MA", "MD", "ME", "MI", "NC", "NH", "NJ", "NY", "OH", "PA", "RI", "SC", "VA", "VT", "WV"]);
+  const central = new Set(["AL", "AR", "IA", "IL", "LA", "MN", "MO", "MS", "OK", "TN", "TX", "WI"]);
+  const mountain = new Set(["AZ", "CO", "ID", "MT", "NM", "UT", "WY"]);
+  const pacific = new Set(["CA", "NV", "OR", "WA"]);
+
+  if (pacific.has(s)) return "America/Los_Angeles";
+  if (mountain.has(s)) return "America/Denver";
+  if (central.has(s)) return "America/Chicago";
+  if (eastern.has(s)) return "America/New_York";
+  return "America/New_York";
+}
+
+function offsetForTimeZone(date, time, timeZone) {
+  const probe = new Date(`${date}T${time}:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).formatToParts(probe);
+  const tzName = parts.find((part) => part.type === "timeZoneName")?.value || "GMT-5";
+  const match = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+  if (!match) return "-05:00";
+  const sign = match[1];
+  const hours = String(match[2]).padStart(2, "0");
+  const minutes = String(match[3] || "00").padStart(2, "0");
+  return `${sign}${hours}:${minutes}`;
+}
+
+function isoDateTimeInEventZone(date, time, state) {
+  const timeZone = stateToTimeZone(state);
+  const offset = offsetForTimeZone(date, time, timeZone);
+  const [year, month, day] = String(date).split("-").map(Number);
+  const [hour, minute] = String(time).split(":").map(Number);
+  const match = offset.match(/([+-])(\d{2}):(\d{2})/);
+
+  if (!year || !month || !day || Number.isNaN(hour) || Number.isNaN(minute) || !match) {
+    return `${date}T${time}:00${offset}`;
+  }
+
+  const sign = match[1] === "-" ? -1 : 1;
+  const offsetMinutes = sign * (Number(match[2]) * 60 + Number(match[3]));
+
+  // Airtable stores date/time fields as an instant. Convert the event's local
+  // wall-clock time into UTC before sending it, so 12:00 PM NY displays as
+  // 12:00 PM EDT in Airtable instead of 8:00 AM EDT.
+  const utcMillis = Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMinutes * 60 * 1000;
+  return new Date(utcMillis).toISOString();
 }
 
 function stateFromAddress(address) {
@@ -139,8 +187,8 @@ exports.handler = async (event) => {
       "Brand": [brandRecordId],
       "Store": [storeRecordId],
       "Event Date": eventDate,
-      "Start Time": isoDateTime(eventDate, startTime),
-      "End Time": isoDateTime(eventDate, endTime),
+      "Start Time": isoDateTimeInEventZone(eventDate, startTime, store.state || stateFromAddress(store.address)),
+      "End Time": isoDateTimeInEventZone(eventDate, endTime, store.state || stateFromAddress(store.address)),
       "Hourly Rate": String(hourlyRate),
       "Status": publish ? "Scheduled" : "Draft",
       "Portal Visible": Boolean(publish),
