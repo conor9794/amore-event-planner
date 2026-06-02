@@ -5,6 +5,7 @@ let ambassadors = [];
 let currentBookings = [];
 let currentInterests = [];
 let selectedAmbassadorId = "";
+let selectedEventId = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -276,9 +277,100 @@ function renderEventOptions() {
   plannerEvents.forEach((event) => {
     const option = document.createElement("option");
     option.value = event.id;
-    option.textContent = `${event.name}${event.startTime ? ` — ${formatDateTime(event.startTime)}` : ""}`;
+    option.textContent = eventDisplayName(event);
     select.appendChild(option);
   });
+
+  select.value = selectedEventId || "";
+  renderEventResults();
+}
+
+function eventDisplayName(event) {
+  const datePart = event?.startTime ? formatDateTime(event.startTime) : (event?.eventDate ? formatDate(event.eventDate) : "");
+  return `${event?.name || "Untitled Event"}${datePart ? ` — ${datePart}` : ""}`;
+}
+
+function eventSearchText(event) {
+  return `${event?.name || ""} ${event?.brand || ""} ${event?.store || ""} ${event?.address || ""} ${event?.eventDate || ""} ${event?.startTime || ""} ${event?.hourlyRate || ""}`.toLowerCase();
+}
+
+function renderEventResults() {
+  const results = $("eventResults");
+  if (!results) return;
+
+  const searchInput = $("eventSearch");
+  const search = searchInput.value.trim().toLowerCase();
+
+  const matches = plannerEvents
+    .filter((event) => !search || eventSearchText(event).includes(search))
+    .slice(0, 12);
+
+  if (matches.length === 0) {
+    results.innerHTML = `<div class="resultEmpty">No matching events found.</div>`;
+    results.className = "searchResults";
+    return;
+  }
+
+  results.innerHTML = matches.map((event) => `
+    <button type="button" class="resultItem eventResultItem" data-event-id="${escapeHtml(event.id)}">
+      <strong>${escapeHtml(event.name || "Untitled Event")}</strong>
+      <span>${escapeHtml([event.startTime ? formatDateTime(event.startTime) : (event.eventDate ? formatDate(event.eventDate) : ""), event.store || "", event.brand || ""].filter(Boolean).join(" • "))}</span>
+      ${event.address ? `<em>${escapeHtml(event.address)}</em>` : ""}
+    </button>
+  `).join("");
+  results.className = "searchResults";
+}
+
+function selectEvent(eventId) {
+  const event = plannerEvents.find((item) => item.id === eventId);
+  if (!event) return;
+
+  selectedEventId = event.id;
+  $("assignEvent").value = event.id;
+  $("eventSearch").value = eventDisplayName(event);
+  $("eventResults").className = "searchResults hidden";
+  renderSelectedEvent();
+  handleEventChange();
+}
+
+function renderSelectedEvent() {
+  const box = $("selectedEventBox");
+  const event = plannerEvents.find((item) => item.id === selectedEventId);
+
+  if (!event) {
+    box.className = "selectedBox hidden";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = `
+    <div>
+      <div class="boxTitle">Selected Event</div>
+      <strong>${escapeHtml(event.name || "Untitled Event")}</strong>
+      ${event.startTime ? `<br>${escapeHtml(formatDateTime(event.startTime))}` : ""}
+    </div>
+    <button type="button" class="miniButton" id="clearEventBtn">Change</button>
+  `;
+  box.className = "selectedBox";
+  $("clearEventBtn")?.addEventListener("click", () => {
+    selectedEventId = "";
+    $("assignEvent").value = "";
+    $("eventSearch").value = "";
+    renderSelectedEvent();
+    resetEventDependentBoxes();
+    renderEventResults();
+    $("eventSearch").focus();
+  });
+}
+
+function resetEventDependentBoxes() {
+  currentBookings = [];
+  currentInterests = [];
+  $("eventDetails").className = "detailBox hidden";
+  $("bookedBox").className = "detailBox hidden";
+  $("interestBox").className = "detailBox hidden";
+  $("bookedList").innerHTML = "";
+  $("interestList").innerHTML = "";
 }
 
 function ambassadorDisplayName(ambassador) {
@@ -384,21 +476,23 @@ function renderSelectedAmbassador() {
 }
 
 async function handleEventChange() {
-  const eventId = $("assignEvent").value;
+  const eventId = selectedEventId || $("assignEvent").value;
   const event = plannerEvents.find((item) => item.id === eventId);
-  currentBookings = [];
+  resetEventDependentBoxes();
   hideAssignMessage();
 
   if (!event) {
-    $("eventDetails").className = "detailBox hidden";
-    $("bookedBox").className = "detailBox hidden";
-    $("interestBox").className = "detailBox hidden";
     selectedAmbassadorId = "";
     $("ambassadorSearch").value = "";
+    renderSelectedEvent();
     renderSelectedAmbassador();
     renderAmbassadorOptions();
     return;
   }
+
+  selectedEventId = event.id;
+  $("assignEvent").value = event.id;
+  renderSelectedEvent();
 
   $("eventDetails").innerHTML = `
     <strong>${escapeHtml(event.name)}</strong><br>
@@ -503,26 +597,23 @@ function renderBookedList() {
 function resetAssignFormForNextBooking() {
   $("assignEvent").value = "";
   $("assignAmbassador").value = "";
+  $("eventSearch").value = "";
   $("ambassadorSearch").value = "";
+  selectedEventId = "";
   selectedAmbassadorId = "";
-  currentBookings = [];
-  currentInterests = [];
+  resetEventDependentBoxes();
 
-  $("eventDetails").className = "detailBox hidden";
-  $("bookedBox").className = "detailBox hidden";
-  $("interestBox").className = "detailBox hidden";
-  $("bookedList").innerHTML = "";
-  $("interestList").innerHTML = "";
-
+  renderSelectedEvent();
   renderSelectedAmbassador();
+  renderEventOptions();
   renderAmbassadorOptions();
-  $("assignEvent").focus();
+  $("eventSearch").focus();
 }
 
 async function createBooking() {
   hideAssignMessage();
 
-  const eventId = $("assignEvent").value;
+  const eventId = selectedEventId || $("assignEvent").value;
   const ambassadorId = selectedAmbassadorId || $("assignAmbassador").value;
   const event = plannerEvents.find((item) => item.id === eventId);
   const ambassador = ambassadors.find((item) => item.id === ambassadorId);
@@ -568,7 +659,23 @@ $("draftBtn").addEventListener("click", () => submitEvent(false));
 $("publishBtn").addEventListener("click", () => submitEvent(true));
 $("addEventTab").addEventListener("click", () => switchPage("add"));
 $("assignTab").addEventListener("click", () => switchPage("assign"));
-$("assignEvent").addEventListener("change", handleEventChange);
+$("assignEvent").addEventListener("change", () => {
+  selectedEventId = $("assignEvent").value;
+  handleEventChange();
+});
+$("eventSearch").addEventListener("input", () => {
+  selectedEventId = "";
+  $("assignEvent").value = "";
+  renderSelectedEvent();
+  resetEventDependentBoxes();
+  renderEventResults();
+});
+$("eventSearch").addEventListener("focus", renderEventResults);
+$("eventResults").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-event-id]");
+  if (!button || button.disabled) return;
+  selectEvent(button.dataset.eventId);
+});
 $("ambassadorSearch").addEventListener("input", () => {
   selectedAmbassadorId = "";
   $("assignAmbassador").value = "";
@@ -589,6 +696,7 @@ $("interestList").addEventListener("click", (event) => {
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".searchLabel")) {
     $("ambassadorResults").className = "searchResults hidden";
+    $("eventResults").className = "searchResults hidden";
   }
 });
 $("createBookingBtn").addEventListener("click", createBooking);

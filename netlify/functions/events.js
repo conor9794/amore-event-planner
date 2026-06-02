@@ -21,9 +21,7 @@ function dateSortValue(event) {
 exports.handler = async () => {
   try {
     // Do not sort in Airtable. Different bases may use Start Time, Event Start Time, etc.
-    const records = await listRecords(TABLES.EVENTS, {
-      maxRecords: "300"
-    });
+    const records = await listRecords(TABLES.EVENTS);
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);

@@ -25,3 +25,6 @@ Recommended table variables:
 ## Fix included
 
 Ambassador search now loads all Ambassador records instead of capping at 500 records, so active ambassadors later in the table/alphabet should appear in search.
+
+
+Update: Assign Ambassador now has searchable event selection with mobile-friendly result cards.

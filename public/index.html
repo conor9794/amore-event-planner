@@ -87,12 +87,17 @@
           <p>Create a Booking record for an event. This also checks Send Save the Date by default.</p>
         </div>
 
-        <label>
-          Event
-          <select id="assignEvent">
-            <option value="">Loading events...</option>
-          </select>
+        <label class="searchLabel">
+          Search Event
+          <input id="eventSearch" type="text" placeholder="Type brand, store, date, or event name..." autocomplete="off" />
+          <div id="eventResults" class="searchResults hidden"></div>
         </label>
+
+        <select id="assignEvent" class="hidden" aria-label="Selected event">
+          <option value="">Select event...</option>
+        </select>
+
+        <div id="selectedEventBox" class="selectedBox hidden"></div>
 
         <div id="eventDetails" class="detailBox hidden"></div>
 
