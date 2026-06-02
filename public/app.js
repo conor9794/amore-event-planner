@@ -28,6 +28,22 @@ function hideAssignMessage() {
   $("assignMessage").textContent = "";
 }
 
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  document.body.classList.toggle("dark", isDark);
+  const btn = $("themeToggle");
+  if (btn) btn.textContent = isDark ? "Light" : "Dark";
+  localStorage.setItem("amorePlannerTheme", isDark ? "dark" : "light");
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("amorePlannerTheme") || "light";
+  applyTheme(saved);
+  $("themeToggle")?.addEventListener("click", () => {
+    applyTheme(document.body.classList.contains("dark") ? "light" : "dark");
+  });
+}
+
 function setButtons(disabled) {
   $("draftBtn").disabled = disabled;
   $("publishBtn").disabled = disabled;
@@ -394,5 +410,6 @@ $("assignEvent").addEventListener("change", handleEventChange);
 $("ambassadorSearch").addEventListener("input", renderAmbassadorOptions);
 $("createBookingBtn").addEventListener("click", createBooking);
 
+initTheme();
 loadBrands();
 loadConfigAndGoogle();

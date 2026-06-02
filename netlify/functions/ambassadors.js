@@ -7,26 +7,47 @@ function value(fields, names) {
   return "";
 }
 
+function asText(v) {
+  if (Array.isArray(v)) return v.join(", ");
+  return v || "";
+}
+
 exports.handler = async () => {
   try {
+    // Do not sort in Airtable here. If a field name differs between bases, Airtable returns
+    // "Unknown field name" before the page can load. We sort safely after reading.
     const records = await listRecords(TABLES.AMBASSADORS, {
-      maxRecords: "200",
-      "sort[0][field]": "Name",
-      "sort[0][direction]": "asc"
+      maxRecords: "500"
     });
 
     const ambassadors = records
       .map((record) => {
         const f = record.fields || {};
+        const name = asText(value(f, [
+          "Name",
+          "Ambassador Name",
+          "Full Name",
+          "BA Name",
+          "Staff Name",
+          "Ambassador"
+        ]));
+        const email = asText(value(f, [
+          "Email",
+          "Ambassador Email",
+          "Email Address",
+          "Staff Email"
+        ]));
+
         return {
           id: record.id,
-          name: value(f, ["Name", "Ambassador Name"]),
-          email: value(f, ["Email", "Ambassador Email"]),
-          phone: value(f, ["Phone Number", "Phone"]),
+          name,
+          email,
+          phone: asText(value(f, ["Phone Number", "Phone", "Mobile", "Cell"])),
           active: f["Active"] !== false
         };
       })
-      .filter((ambassador) => ambassador.name || ambassador.email);
+      .filter((ambassador) => ambassador.name || ambassador.email)
+      .sort((a, b) => (a.name || a.email || "").localeCompare(b.name || b.email || ""));
 
     return {
       statusCode: 200,

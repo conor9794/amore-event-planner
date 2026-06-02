@@ -1,4 +1,4 @@
-const { TABLES, listRecords, createRecord, escapeFormulaString } = require("./_airtable");
+const { TABLES, listRecords, createRecord } = require("./_airtable");
 
 function linkedIds(value) {
   return Array.isArray(value) ? value : [];
@@ -23,21 +23,30 @@ function bookingSummary(record) {
   };
 }
 
+async function allBookings() {
+  return listRecords(TABLES.BOOKINGS, { maxRecords: "1000" });
+}
+
 async function findExistingBooking(eventId, ambassadorId) {
-  const formula = `AND(FIND('${escapeFormulaString(eventId)}', ARRAYJOIN({Event})), FIND('${escapeFormulaString(ambassadorId)}', ARRAYJOIN({Ambassador})))`;
-  const records = await listRecords(TABLES.BOOKINGS, {
-    maxRecords: "1",
-    filterByFormula: formula
-  });
-  return records[0] || null;
+  const records = await allBookings();
+  return records.find((record) => {
+    const f = record.fields || {};
+    return linkedIds(f["Event"]).includes(eventId) && linkedIds(f["Ambassador"]).includes(ambassadorId);
+  }) || null;
 }
 
 async function listBookingsForEvent(eventId) {
-  const formula = `FIND('${escapeFormulaString(eventId)}', ARRAYJOIN({Event}))`;
-  return listRecords(TABLES.BOOKINGS, {
-    maxRecords: "100",
-    filterByFormula: formula
-  });
+  const records = await allBookings();
+  return records.filter((record) => linkedIds((record.fields || {})["Event"]).includes(eventId));
+}
+
+function optionalFieldsFor(body) {
+  const fields = {};
+  if (body.scheduledStart) fields["Scheduled Start Snapshot"] = body.scheduledStart;
+  if (body.scheduledEnd) fields["Scheduled End Snapshot"] = body.scheduledEnd;
+  if (body.sendSaveTheDate) fields["Send Save the Date"] = true;
+  fields["Created From Planner Page"] = true;
+  return fields;
 }
 
 exports.handler = async (event) => {
@@ -62,7 +71,7 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === "POST") {
       const body = JSON.parse(event.body || "{}");
-      const { eventId, ambassadorId, scheduledStart, scheduledEnd, sendSaveTheDate = true } = body;
+      const { eventId, ambassadorId } = body;
 
       if (!eventId || !ambassadorId) {
         return {
@@ -86,22 +95,15 @@ exports.handler = async (event) => {
         "Ambassador": [ambassadorId]
       };
 
-      if (scheduledStart) requiredFields["Scheduled Start Snapshot"] = scheduledStart;
-      if (scheduledEnd) requiredFields["Scheduled End Snapshot"] = scheduledEnd;
-
-      const optionalFields = {};
-      if (sendSaveTheDate) optionalFields["Send Save the Date"] = true;
-      optionalFields["Created From Planner Page"] = true;
-
       let created;
       let warning = "";
       try {
-        created = await createRecord(TABLES.BOOKINGS, { ...requiredFields, ...optionalFields });
+        created = await createRecord(TABLES.BOOKINGS, { ...requiredFields, ...optionalFieldsFor(body) });
       } catch (err) {
         const message = String(err.message || "");
         if (message.includes("Unknown field name") || message.includes("INVALID_VALUE_FOR_COLUMN")) {
           created = await createRecord(TABLES.BOOKINGS, requiredFields);
-          warning = "Booking was created, but optional checkbox fields were skipped. Add Send Save the Date and Created From Planner Page to Bookings if you want those fields set automatically.";
+          warning = "Booking was created, but optional fields were skipped. Add Send Save the Date, Scheduled Start Snapshot, Scheduled End Snapshot, and Created From Planner Page to Bookings if you want those set automatically.";
         } else {
           throw err;
         }

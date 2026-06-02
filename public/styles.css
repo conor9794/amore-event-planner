@@ -6,6 +6,24 @@
   --muted: #6b7280;
   --border: #e5e7eb;
   --white: #ffffff;
+  --input-bg: #ffffff;
+  --soft: #f3f4f6;
+  --box-bg: #f9fafb;
+  --shadow: 0 8px 28px rgba(0,0,0,.07);
+}
+
+body.dark {
+  --red: #ef4444;
+  --red2: #dc2626;
+  --bg: #0f172a;
+  --text: #f8fafc;
+  --muted: #cbd5e1;
+  --border: #334155;
+  --white: #111827;
+  --input-bg: #020617;
+  --soft: #1e293b;
+  --box-bg: #0f172a;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
 }
 
 * { box-sizing: border-box; }
@@ -25,6 +43,24 @@ body {
 
 header {
   padding: 10px 4px 18px;
+}
+
+.topBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.themeToggle {
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-size: 13px;
+  line-height: 1;
+  min-width: 64px;
 }
 
 .eyebrow {
@@ -59,7 +95,7 @@ p {
 }
 
 .tab {
-  background: #f3f4f6;
+  background: var(--soft);
   color: var(--text);
   border: 1px solid var(--border);
 }
@@ -78,7 +114,7 @@ p {
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 18px;
-  box-shadow: 0 8px 28px rgba(0,0,0,.07);
+  box-shadow: var(--shadow);
 }
 
 .sectionIntro {
@@ -98,7 +134,13 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: 12px;
   font: inherit;
-  background: white;
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--muted);
+  opacity: .9;
 }
 
 textarea { resize: vertical; }
@@ -140,14 +182,14 @@ button:disabled {
 }
 
 .secondary {
-  background: #f3f4f6;
+  background: var(--soft);
   color: var(--text);
 }
 
 .storeBox,
 .detailBox {
   border: 1px solid var(--border);
-  background: #f9fafb;
+  background: var(--box-bg);
   border-radius: 14px;
   padding: 12px;
   margin-bottom: 14px;
@@ -175,7 +217,8 @@ button:disabled {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: white;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .checkboxRow {
