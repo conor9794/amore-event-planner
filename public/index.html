@@ -101,17 +101,23 @@
           <div id="bookedList" class="smallList"></div>
         </div>
 
-        <label>
+        <div id="interestBox" class="detailBox hidden">
+          <div class="boxTitle">Interested Ambassadors</div>
+          <div class="boxHint">Tap a name to select that ambassador.</div>
+          <div id="interestList" class="smallList"></div>
+        </div>
+
+        <label class="searchLabel">
           Search Ambassador
-          <input id="ambassadorSearch" type="text" placeholder="Type name or email..." />
+          <input id="ambassadorSearch" type="text" placeholder="Type name or email..." autocomplete="off" />
+          <div id="ambassadorResults" class="searchResults hidden"></div>
         </label>
 
-        <label>
-          Ambassador
-          <select id="assignAmbassador">
-            <option value="">Loading ambassadors...</option>
-          </select>
-        </label>
+        <select id="assignAmbassador" class="hidden" aria-label="Selected ambassador">
+          <option value="">Select ambassador...</option>
+        </select>
+
+        <div id="selectedAmbassadorBox" class="selectedBox hidden"></div>
 
         <label class="checkboxRow">
           <input id="sendSaveTheDate" type="checkbox" checked />

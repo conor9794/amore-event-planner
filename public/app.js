@@ -3,6 +3,8 @@ let autocomplete = null;
 let plannerEvents = [];
 let ambassadors = [];
 let currentBookings = [];
+let currentInterests = [];
+let selectedAmbassadorId = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -279,28 +281,106 @@ function renderEventOptions() {
   });
 }
 
-function renderAmbassadorOptions() {
-  const search = $("ambassadorSearch").value.trim().toLowerCase();
-  const bookedAmbassadorIds = new Set(currentBookings.flatMap((booking) => booking.ambassadorIds || []));
-  const select = $("assignAmbassador");
-  select.innerHTML = `<option value="">Select ambassador...</option>`;
+function ambassadorDisplayName(ambassador) {
+  return ambassador?.name || ambassador?.email || "Unnamed Ambassador";
+}
 
+function ambassadorSearchText(ambassador) {
+  return `${ambassador?.name || ""} ${ambassador?.email || ""} ${ambassador?.phone || ""}`.toLowerCase();
+}
+
+function bookedAmbassadorIdSet() {
+  return new Set(currentBookings.flatMap((booking) => booking.ambassadorIds || []));
+}
+
+function renderAmbassadorOptions() {
+  const select = $("assignAmbassador");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Select ambassador...</option>`;
   ambassadors
     .filter((ambassador) => ambassador.active !== false)
-    .filter((ambassador) => {
-      if (!search) return true;
-      return `${ambassador.name} ${ambassador.email}`.toLowerCase().includes(search);
-    })
     .forEach((ambassador) => {
       const option = document.createElement("option");
       option.value = ambassador.id;
-      option.textContent = `${ambassador.name || ambassador.email}${ambassador.email ? ` — ${ambassador.email}` : ""}`;
-      if (bookedAmbassadorIds.has(ambassador.id)) {
-        option.disabled = true;
-        option.textContent += " — already booked";
-      }
+      option.textContent = `${ambassadorDisplayName(ambassador)}${ambassador.email ? ` — ${ambassador.email}` : ""}`;
       select.appendChild(option);
     });
+
+  select.value = selectedAmbassadorId || "";
+  renderAmbassadorResults();
+}
+
+function renderAmbassadorResults() {
+  const results = $("ambassadorResults");
+  if (!results) return;
+
+  const searchInput = $("ambassadorSearch");
+  const search = searchInput.value.trim().toLowerCase();
+  const bookedIds = bookedAmbassadorIdSet();
+
+  const matches = ambassadors
+    .filter((ambassador) => ambassador.active !== false)
+    .filter((ambassador) => !search || ambassadorSearchText(ambassador).includes(search))
+    .slice(0, 12);
+
+  if (matches.length === 0) {
+    results.innerHTML = `<div class="resultEmpty">No matching ambassadors found.</div>`;
+    results.className = "searchResults";
+    return;
+  }
+
+  results.innerHTML = matches.map((ambassador) => {
+    const booked = bookedIds.has(ambassador.id);
+    return `
+      <button type="button" class="resultItem" data-ambassador-id="${escapeHtml(ambassador.id)}" ${booked ? "disabled" : ""}>
+        <strong>${escapeHtml(ambassadorDisplayName(ambassador))}</strong>
+        ${ambassador.email ? `<span>${escapeHtml(ambassador.email)}</span>` : ""}
+        ${booked ? `<em>Already booked</em>` : ""}
+      </button>
+    `;
+  }).join("");
+  results.className = "searchResults";
+}
+
+function selectAmbassador(ambassadorId) {
+  const ambassador = ambassadors.find((item) => item.id === ambassadorId);
+  if (!ambassador) return;
+
+  selectedAmbassadorId = ambassador.id;
+  $("assignAmbassador").value = ambassador.id;
+  $("ambassadorSearch").value = ambassadorDisplayName(ambassador);
+  $("ambassadorResults").className = "searchResults hidden";
+  renderSelectedAmbassador();
+}
+
+function renderSelectedAmbassador() {
+  const box = $("selectedAmbassadorBox");
+  const ambassador = ambassadors.find((item) => item.id === selectedAmbassadorId);
+
+  if (!ambassador) {
+    box.className = "selectedBox hidden";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = `
+    <div>
+      <div class="boxTitle">Selected Ambassador</div>
+      <strong>${escapeHtml(ambassadorDisplayName(ambassador))}</strong>
+      ${ambassador.email ? `<br>${escapeHtml(ambassador.email)}` : ""}
+    </div>
+    <button type="button" class="miniButton" id="clearAmbassadorBtn">Change</button>
+  `;
+  box.className = "selectedBox";
+  $("clearAmbassadorBtn")?.addEventListener("click", () => {
+    selectedAmbassadorId = "";
+    $("assignAmbassador").value = "";
+    $("ambassadorSearch").value = "";
+    renderSelectedAmbassador();
+    renderAmbassadorResults();
+    $("ambassadorSearch").focus();
+  });
 }
 
 async function handleEventChange() {
@@ -312,6 +392,10 @@ async function handleEventChange() {
   if (!event) {
     $("eventDetails").className = "detailBox hidden";
     $("bookedBox").className = "detailBox hidden";
+    $("interestBox").className = "detailBox hidden";
+    selectedAmbassadorId = "";
+    $("ambassadorSearch").value = "";
+    renderSelectedAmbassador();
     renderAmbassadorOptions();
     return;
   }
@@ -322,12 +406,18 @@ async function handleEventChange() {
     ${event.startTime ? `Start: ${escapeHtml(formatDateTime(event.startTime))}<br>` : ""}
     ${event.endTime ? `End: ${escapeHtml(formatDateTime(event.endTime))}<br>` : ""}
     ${event.hourlyRate ? `Hourly Rate: ${escapeHtml(event.hourlyRate)}<br>` : ""}
-    ${event.address ? `Address: ${escapeHtml(event.address)}<br>` : ""}
-    ${event.status ? `Status: ${escapeHtml(event.status)}` : ""}
+    ${event.address ? `Address: ${escapeHtml(event.address)}` : ""}
   `;
   $("eventDetails").className = "detailBox";
 
-  await loadBookingsForEvent(eventId);
+  selectedAmbassadorId = "";
+  $("ambassadorSearch").value = "";
+  renderSelectedAmbassador();
+
+  await Promise.all([
+    loadBookingsForEvent(eventId),
+    loadInterestsForEvent(eventId)
+  ]);
 }
 
 async function loadBookingsForEvent(eventId) {
@@ -342,6 +432,53 @@ async function loadBookingsForEvent(eventId) {
   } catch (err) {
     showAssignMessage(err.message, "error");
   }
+}
+
+async function loadInterestsForEvent(eventId) {
+  try {
+    const res = await fetch(`/api/interests?eventId=${encodeURIComponent(eventId)}`);
+    const data = await res.json();
+    currentInterests = data.interests || [];
+    renderInterestList();
+  } catch (_err) {
+    currentInterests = [];
+    renderInterestList();
+  }
+}
+
+function renderInterestList() {
+  const box = $("interestBox");
+  const list = $("interestList");
+  const bookedIds = bookedAmbassadorIdSet();
+
+  const unique = [];
+  const seen = new Set();
+  currentInterests.forEach((interest) => {
+    const ambassadorId = (interest.ambassadorIds || [])[0];
+    const key = ambassadorId || interest.ambassadorName || interest.ambassadorEmail || interest.id;
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push(interest);
+  });
+
+  if (unique.length === 0) {
+    box.className = "detailBox hidden";
+    list.innerHTML = "";
+    return;
+  }
+
+  list.innerHTML = unique.map((interest) => {
+    const ambassadorId = (interest.ambassadorIds || [])[0] || "";
+    const booked = ambassadorId && bookedIds.has(ambassadorId);
+    return `
+      <button type="button" class="interestItem" data-ambassador-id="${escapeHtml(ambassadorId)}" ${(!ambassadorId || booked) ? "disabled" : ""}>
+        <strong>${escapeHtml(interest.ambassadorName || "Interested Ambassador")}</strong>
+        ${interest.ambassadorEmail ? `<span>${escapeHtml(interest.ambassadorEmail)}</span>` : ""}
+        ${booked ? `<em>Already booked</em>` : ""}
+      </button>
+    `;
+  }).join("");
+  box.className = "detailBox";
 }
 
 function renderBookedList() {
@@ -367,7 +504,7 @@ async function createBooking() {
   hideAssignMessage();
 
   const eventId = $("assignEvent").value;
-  const ambassadorId = $("assignAmbassador").value;
+  const ambassadorId = selectedAmbassadorId || $("assignAmbassador").value;
   const event = plannerEvents.find((item) => item.id === eventId);
 
   if (!eventId) return showAssignMessage("Select an event.", "error");
@@ -393,8 +530,11 @@ async function createBooking() {
     if (!res.ok) throw new Error(data.error || "Booking creation failed.");
 
     showAssignMessage(data.warning || "Booking created. Save the Date should send if the Airtable automation is active.", data.warning ? "error" : "ok");
+    selectedAmbassadorId = "";
     $("assignAmbassador").value = "";
-    await loadBookingsForEvent(eventId);
+    $("ambassadorSearch").value = "";
+    renderSelectedAmbassador();
+    await Promise.all([loadBookingsForEvent(eventId), loadInterestsForEvent(eventId)]);
   } catch (err) {
     showAssignMessage(err.message, "error");
   } finally {
@@ -407,7 +547,28 @@ $("publishBtn").addEventListener("click", () => submitEvent(true));
 $("addEventTab").addEventListener("click", () => switchPage("add"));
 $("assignTab").addEventListener("click", () => switchPage("assign"));
 $("assignEvent").addEventListener("change", handleEventChange);
-$("ambassadorSearch").addEventListener("input", renderAmbassadorOptions);
+$("ambassadorSearch").addEventListener("input", () => {
+  selectedAmbassadorId = "";
+  $("assignAmbassador").value = "";
+  renderSelectedAmbassador();
+  renderAmbassadorResults();
+});
+$("ambassadorSearch").addEventListener("focus", renderAmbassadorResults);
+$("ambassadorResults").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ambassador-id]");
+  if (!button || button.disabled) return;
+  selectAmbassador(button.dataset.ambassadorId);
+});
+$("interestList").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ambassador-id]");
+  if (!button || button.disabled) return;
+  selectAmbassador(button.dataset.ambassadorId);
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".searchLabel")) {
+    $("ambassadorResults").className = "searchResults hidden";
+  }
+});
 $("createBookingBtn").addEventListener("click", createBooking);
 
 initTheme();

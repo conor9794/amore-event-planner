@@ -6,7 +6,8 @@ const TABLES = {
   STORES: process.env.AIRTABLE_STORES_TABLE || "tblQB27xwvKiVyLWW",
   EVENTS: process.env.AIRTABLE_EVENTS_TABLE || "tblEpybLYG9dJmtEz",
   AMBASSADORS: process.env.AIRTABLE_AMBASSADORS_TABLE || "Ambassadors",
-  BOOKINGS: process.env.AIRTABLE_BOOKINGS_TABLE || "Bookings"
+  BOOKINGS: process.env.AIRTABLE_BOOKINGS_TABLE || "Bookings",
+  INTEREST: process.env.AIRTABLE_INTEREST_TABLE || "Event Interest / Availability"
 };
 
 function requireToken() {
