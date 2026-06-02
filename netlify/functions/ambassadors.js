@@ -16,9 +16,10 @@ exports.handler = async () => {
   try {
     // Do not sort in Airtable here. If a field name differs between bases, Airtable returns
     // "Unknown field name" before the page can load. We sort safely after reading.
-    const records = await listRecords(TABLES.AMBASSADORS, {
-      maxRecords: "500"
-    });
+    // Load all ambassadors. Airtable's maxRecords would cap this table, and this base
+    // already has more than 500 ambassador records. Capping caused later alphabetic
+    // names, such as Test Conor, to never reach the search list.
+    const records = await listRecords(TABLES.AMBASSADORS);
 
     const ambassadors = records
       .map((record) => {

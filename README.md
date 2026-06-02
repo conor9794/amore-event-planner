@@ -20,3 +20,8 @@ Recommended table variables:
 - `AIRTABLE_INTEREST_TABLE`
 
 `AIRTABLE_INTEREST_TABLE` should point to the Event Interest / Availability table if the exact table name differs.
+
+
+## Fix included
+
+Ambassador search now loads all Ambassador records instead of capping at 500 records, so active ambassadors later in the table/alphabet should appear in search.
