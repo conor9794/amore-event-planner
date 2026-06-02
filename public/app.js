@@ -500,12 +500,32 @@ function renderBookedList() {
   box.className = "detailBox";
 }
 
+function resetAssignFormForNextBooking() {
+  $("assignEvent").value = "";
+  $("assignAmbassador").value = "";
+  $("ambassadorSearch").value = "";
+  selectedAmbassadorId = "";
+  currentBookings = [];
+  currentInterests = [];
+
+  $("eventDetails").className = "detailBox hidden";
+  $("bookedBox").className = "detailBox hidden";
+  $("interestBox").className = "detailBox hidden";
+  $("bookedList").innerHTML = "";
+  $("interestList").innerHTML = "";
+
+  renderSelectedAmbassador();
+  renderAmbassadorOptions();
+  $("assignEvent").focus();
+}
+
 async function createBooking() {
   hideAssignMessage();
 
   const eventId = $("assignEvent").value;
   const ambassadorId = selectedAmbassadorId || $("assignAmbassador").value;
   const event = plannerEvents.find((item) => item.id === eventId);
+  const ambassador = ambassadors.find((item) => item.id === ambassadorId);
 
   if (!eventId) return showAssignMessage("Select an event.", "error");
   if (!ambassadorId) return showAssignMessage("Select an ambassador.", "error");
@@ -529,12 +549,14 @@ async function createBooking() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Booking creation failed.");
 
-    showAssignMessage(data.warning || "Booking created. Save the Date should send if the Airtable automation is active.", data.warning ? "error" : "ok");
-    selectedAmbassadorId = "";
-    $("assignAmbassador").value = "";
-    $("ambassadorSearch").value = "";
-    renderSelectedAmbassador();
-    await Promise.all([loadBookingsForEvent(eventId), loadInterestsForEvent(eventId)]);
+    const eventName = event?.name || "the selected event";
+    const ambassadorName = ambassadorDisplayName(ambassador);
+    const successText = data.warning
+      ? data.warning
+      : `Booking created for ${ambassadorName} — ${eventName}. The form has been cleared for the next booking.`;
+
+    resetAssignFormForNextBooking();
+    showAssignMessage(successText, data.warning ? "error" : "ok");
   } catch (err) {
     showAssignMessage(err.message, "error");
   } finally {
