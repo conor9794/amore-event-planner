@@ -198,7 +198,7 @@ exports.handler = async (event) => {
       "Start Time": isoDateTimeInEventZone(eventDate, startTime, store.state || stateFromAddress(store.address)),
       "End Time": isoDateTimeInEventZone(eventDate, endTime, store.state || stateFromAddress(store.address)),
       "Hourly Rate": String(hourlyRate),
-      "Status": publish ? "Scheduled" : "Draft",
+      "Status": publish ? "Requested" : "Draft",
       "Portal Visible": Boolean(publish),
       "Details": details || ""
     });
@@ -209,7 +209,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         eventId: createdEvent.id,
         storeId: storeRecordId,
-        status: publish ? "Scheduled" : "Draft",
+        status: publish ? "Requested" : "Draft",
         portalVisible: Boolean(publish),
         eventArea
       })
