@@ -34,12 +34,16 @@ function offsetForTimeZone(date, time, timeZone) {
     hour: "2-digit",
     minute: "2-digit"
   }).formatToParts(probe);
+
   const tzName = parts.find((part) => part.type === "timeZoneName")?.value || "GMT-5";
   const match = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+
   if (!match) return "-05:00";
+
   const sign = match[1];
   const hours = String(match[2]).padStart(2, "0");
   const minutes = String(match[3] || "00").padStart(2, "0");
+
   return `${sign}${hours}:${minutes}`;
 }
 
@@ -95,6 +99,7 @@ async function findStoreByAddress(address) {
 async function findStoreByNameAndState(store) {
   const name = String(store.name || "").trim().toLowerCase();
   const state = String(store.state || stateFromAddress(store.address) || "").trim().toUpperCase();
+
   if (!name || !state) return null;
 
   const existing = await listRecords(TABLES.STORES, {
@@ -159,19 +164,21 @@ exports.handler = async (event) => {
     }
 
     const body = JSON.parse(event.body || "{}");
+
     const {
       publish,
       brandRecordId,
       brandName,
       store,
       eventDate,
+      eventArea,
       startTime,
       endTime,
       hourlyRate,
       details
     } = body;
 
-    if (!brandRecordId || !store || !eventDate || !startTime || !endTime || !hourlyRate) {
+    if (!brandRecordId || !store || !eventDate || !eventArea || !startTime || !endTime || !hourlyRate) {
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
@@ -187,6 +194,7 @@ exports.handler = async (event) => {
       "Brand": [brandRecordId],
       "Store": [storeRecordId],
       "Event Date": eventDate,
+      "Event Area": eventArea,
       "Start Time": isoDateTimeInEventZone(eventDate, startTime, store.state || stateFromAddress(store.address)),
       "End Time": isoDateTimeInEventZone(eventDate, endTime, store.state || stateFromAddress(store.address)),
       "Hourly Rate": String(hourlyRate),
@@ -202,7 +210,8 @@ exports.handler = async (event) => {
         eventId: createdEvent.id,
         storeId: storeRecordId,
         status: publish ? "Scheduled" : "Draft",
-        portalVisible: Boolean(publish)
+        portalVisible: Boolean(publish),
+        eventArea
       })
     };
   } catch (err) {
