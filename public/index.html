@@ -48,8 +48,20 @@
             </label>
 
             <label>
-              Hourly Rate
-              <input id="hourlyRate" type="text" placeholder="Enter rate..." required />
+              Event Area
+              <select id="eventArea" required>
+                <option value="">Select area...</option>
+                <option value="Long Island">Long Island</option>
+                <option value="NYC">NYC</option>
+                <option value="NY North Metro">NY North Metro</option>
+                <option value="NJ">NJ</option>
+                <option value="CT">CT</option>
+                <option value="Upstate NY">Upstate NY</option>
+                <option value="MD">MD</option>
+                <option value="DC">DC</option>
+                <option value="MA">MA</option>
+                <option value="FL">FL</option>
+              </select>
             </label>
           </div>
 
@@ -64,6 +76,11 @@
               <input id="endTime" type="time" required />
             </label>
           </div>
+
+          <label>
+            Hourly Rate
+            <input id="hourlyRate" type="text" placeholder="Enter rate..." required />
+          </label>
 
           <label>
             Details / Notes
