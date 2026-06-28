@@ -199,14 +199,15 @@ async function submitEvent(publish) {
     brandName,
     store: selectedPlace,
     eventDate: $("eventDate").value,
+    eventArea: $("eventArea").value,
     startTime: $("startTime").value,
     endTime: $("endTime").value,
     hourlyRate: $("hourlyRate").value.trim(),
     details: $("details").value.trim()
   };
 
-  if (!payload.eventDate || !payload.startTime || !payload.endTime || !payload.hourlyRate) {
-    return showMessage("Fill out date, time, and hourly rate.", "error");
+  if (!payload.eventDate || !payload.eventArea || !payload.startTime || !payload.endTime || !payload.hourlyRate) {
+    return showMessage("Fill out date, event area, time, and hourly rate.", "error");
   }
 
   setButtons(true);
