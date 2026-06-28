@@ -11,43 +11,101 @@ function firstText(value) {
 
 function value(fields, names) {
   for (const name of names) {
-    if (fields && fields[name] !== undefined && fields[name] !== null && fields[name] !== "") return fields[name];
+    if (
+      fields &&
+      fields[name] !== undefined &&
+      fields[name] !== null &&
+      fields[name] !== ""
+    ) {
+      return fields[name];
+    }
   }
   return "";
 }
 
-function interestSummary(record) {
+function ambassadorSummary(record) {
   const f = record.fields || {};
+
+  return {
+    id: record.id,
+    name:
+      firstText(
+        value(f, [
+          "Name",
+          "Ambassador Name",
+          "BA Name"
+        ])
+      ) || "Unknown Ambassador",
+    email: firstText(
+      value(f, [
+        "Email",
+        "Email Address",
+        "Ambassador Email",
+        "Ambassadors Email"
+      ])
+    )
+  };
+}
+
+function interestSummary(record, ambassadorMap = {}) {
+  const f = record.fields || {};
+  const ambassadorIds = linkedIds(f["Ambassador"]);
+  const ambassadorId = ambassadorIds[0] || "";
+  const ambassador = ambassadorMap[ambassadorId];
+
   return {
     id: record.id,
     eventIds: linkedIds(f["Event"]),
-    ambassadorIds: linkedIds(f["Ambassador"]),
-    ambassadorName: firstText(value(f, [
-      "Ambassador Name",
-      "Ambassador",
-      "Available Rep Names",
-      "BA Name",
-      "Name"
-    ])) || "Interested Ambassador",
-    ambassadorEmail: firstText(value(f, [
-      "Ambassador Email",
-      "Ambassadors Email",
-      "Email",
-      "Email Address"
-    ])),
+    ambassadorIds,
+    ambassadorName: ambassador?.name || "Interested Ambassador",
+    ambassadorEmail: ambassador?.email || "",
     response: value(f, ["Response", "Status"]),
-    convertedToBooking: Boolean(value(f, ["Converted to Booking", "Converted To Booking"]))
+    convertedToBooking: Boolean(
+      value(f, ["Converted to Booking", "Converted To Booking"])
+    )
   };
 }
 
 async function listInterestsForEvent(eventId) {
   const records = await listRecords(TABLES.INTEREST, { maxRecords: "1000" });
-  return records
-    .filter((record) => linkedIds((record.fields || {})["Event"]).includes(eventId))
-    .map(interestSummary)
+
+  const matchingRecords = records.filter((record) =>
+    linkedIds((record.fields || {})["Event"]).includes(eventId)
+  );
+
+  const ambassadorIds = [
+    ...new Set(
+      matchingRecords
+        .flatMap((record) => linkedIds((record.fields || {})["Ambassador"]))
+        .filter(Boolean)
+    )
+  ];
+
+  const ambassadorRecords = await listRecords(TABLES.AMBASSADORS, {
+    maxRecords: "1000"
+  });
+
+  const ambassadorMap = {};
+
+  ambassadorRecords.forEach((record) => {
+    if (ambassadorIds.includes(record.id)) {
+      ambassadorMap[record.id] = ambassadorSummary(record);
+    }
+  });
+
+  return matchingRecords
+    .map((record) => interestSummary(record, ambassadorMap))
     .filter((interest) => {
       const response = String(interest.response || "").toLowerCase();
-      return !interest.convertedToBooking && (!response || response.includes("available") || response.includes("interested"));
+
+      return (
+        !interest.convertedToBooking &&
+        (
+          !response ||
+          response.includes("available") ||
+          response.includes("interested")
+        )
+      );
     });
 }
 
@@ -62,6 +120,7 @@ exports.handler = async (event) => {
     }
 
     const eventId = event.queryStringParameters?.eventId;
+
     if (!eventId) {
       return {
         statusCode: 400,
@@ -71,6 +130,7 @@ exports.handler = async (event) => {
     }
 
     const interests = await listInterestsForEvent(eventId);
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
