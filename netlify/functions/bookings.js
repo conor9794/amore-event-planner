@@ -11,20 +11,53 @@ function firstText(value) {
 
 function bookingSummary(record) {
   const f = record.fields || {};
+
+  const assignment = f["Assignment"] || "";
+
   return {
     id: record.id,
-    assignment: f["Assignment"] || "",
+    assignment,
     eventIds: linkedIds(f["Event"]),
     ambassadorIds: linkedIds(f["Ambassador"]),
-    eventName: firstText(f["Event"]) || "",
-    ambassadorName: firstText(f["Ambassador Name"]) || firstText(f["Ambassador"]) || f["Assignment"] || "Booked Ambassador",
-    ambassadorEmail: firstText(f["Ambassadors Email"]) || firstText(f["Ambassador Email"]),
-    eventPayRate: firstText(f["Event Pay Rate (lookup)"]) || firstText(f["Event Pay Rate"]) || "",
+
+    ambassadorName:
+      firstText(f["Ambassador Name"]) ||
+      firstText(f["Ambassador Full Name"]) ||
+      assignment ||
+      "Booked Ambassador",
+
+    ambassadorEmail:
+      firstText(f["Ambassadors Email"]) ||
+      firstText(f["Ambassador Email"]) ||
+      "",
+
+    eventPayRate:
+      firstText(f["Event Pay Rate (lookup)"]) ||
+      firstText(f["Event Pay Rate"]) ||
+      "",
+
     payRateSnapshot: f["Pay Rate Snapshot"] || "",
-    shiftTime: firstText(f["Shift Time"]) || "",
-    eventDate: firstText(f["Event Date"]) || firstText(f["Event Date (formatted)"]) || "",
-    storeName: firstText(f["Store"]) || "",
-    storeAddress: firstText(f["Store Address"]) || firstText(f["Store Address (from Store)"]) || "",
+
+    shiftTime:
+      firstText(f["Shift Time"]) ||
+      "",
+
+    eventDate:
+      firstText(f["Event Date (formatted)"]) ||
+      firstText(f["Event Date"]) ||
+      "",
+
+    storeName:
+      firstText(f["Store Name"]) ||
+      firstText(f["Account Name"]) ||
+      "",
+
+    storeAddress:
+      firstText(f["Store Address"]) ||
+      firstText(f["Store Address (from Store)"]) ||
+      firstText(f["Address"]) ||
+      "",
+
     bookingConfirmed: Boolean(f["Booking Confirmed"]),
     bookingConfirmedEmailSent: Boolean(f["Booking Confirmed Email Sent"]),
     saveTheDateSent: Boolean(f["Save the Date Sent"])
