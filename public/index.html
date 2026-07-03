@@ -22,6 +22,7 @@
     <nav class="tabs" aria-label="Planner pages">
       <button type="button" id="addEventTab" class="tab active">Add Event</button>
       <button type="button" id="assignTab" class="tab">Assign Ambassador</button>
+      <button type="button" id="confirmTab" class="tab">Confirm Booking</button>
     </nav>
 
     <section id="addEventPage" class="page active">
@@ -150,6 +151,21 @@
 
         <div class="actions oneButton">
           <button type="button" id="createBookingBtn" class="primary">Create Booking</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="confirmPage" class="page">
+      <section class="card">
+        <div class="sectionIntro">
+          <h2>Confirm Booking</h2>
+          <p>Select a booking, enter the exact pay rate, and send the booking confirmation email.</p>
+        </div>
+
+        <div id="confirmMessage" class="message hidden"></div>
+
+        <div class="actions oneButton">
+          <button type="button" class="primary" disabled>Coming Soon</button>
         </div>
       </section>
     </section>
