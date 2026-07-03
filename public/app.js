@@ -4,8 +4,10 @@ let plannerEvents = [];
 let ambassadors = [];
 let currentBookings = [];
 let currentInterests = [];
+let unconfirmedBookings = [];
 let selectedAmbassadorId = "";
 let selectedEventId = "";
+let selectedConfirmBookingId = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -21,6 +23,12 @@ function showAssignMessage(text, type = "ok") {
   el.className = `message ${type}`;
 }
 
+function showConfirmMessage(text, type = "ok") {
+  const el = $("confirmMessage");
+  el.textContent = text;
+  el.className = `message ${type}`;
+}
+
 function hideMessage() {
   $("message").className = "message hidden";
   $("message").textContent = "";
@@ -29,6 +37,11 @@ function hideMessage() {
 function hideAssignMessage() {
   $("assignMessage").className = "message hidden";
   $("assignMessage").textContent = "";
+}
+
+function hideConfirmMessage() {
+  $("confirmMessage").className = "message hidden";
+  $("confirmMessage").textContent = "";
 }
 
 function applyTheme(theme) {
@@ -54,6 +67,10 @@ function setButtons(disabled) {
 
 function setCreateBookingButton(disabled) {
   $("createBookingBtn").disabled = disabled;
+}
+
+function setConfirmBookingButton(disabled) {
+  $("confirmBookingBtn").disabled = disabled;
 }
 
 function escapeHtml(value) {
@@ -90,6 +107,17 @@ function formatDate(value) {
   });
 }
 
+function formatCurrency(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  return number.toLocaleString([], {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 function switchPage(pageName) {
   const isAdd = pageName === "add";
   const isAssign = pageName === "assign";
@@ -105,6 +133,10 @@ function switchPage(pageName) {
 
   if (isAssign && plannerEvents.length === 0) {
     loadAssignData();
+  }
+
+  if (isConfirm && unconfirmedBookings.length === 0) {
+    loadConfirmData();
   }
 }
 
@@ -188,7 +220,6 @@ async function loadBrands() {
     select.appendChild(option);
   });
 }
-
 async function submitEvent(publish) {
   hideMessage();
 
@@ -240,6 +271,7 @@ async function submitEvent(publish) {
     $("eventForm").reset();
     selectedPlace = null;
     plannerEvents = [];
+    unconfirmedBookings = [];
     $("selectedStore").className = "storeBox hidden";
   } catch (err) {
     showMessage(err.message, "error");
@@ -391,7 +423,6 @@ function ambassadorSearchText(ambassador) {
 function bookedAmbassadorIdSet() {
   return new Set(currentBookings.flatMap((booking) => booking.ambassadorIds || []));
 }
-
 function renderAmbassadorOptions() {
   const select = $("assignAmbassador");
   if (!select) return;
@@ -596,11 +627,11 @@ function renderBookedList() {
     <div class="item">
       <strong>${escapeHtml(booking.ambassadorName || booking.assignment || "Booked Ambassador")}</strong>
       ${booking.ambassadorEmail ? `<br>${escapeHtml(booking.ambassadorEmail)}` : ""}
+      ${booking.bookingConfirmed ? `<br><em>Confirmed</em>` : `<br><em>Save the Date / Not Confirmed</em>`}
     </div>
   `).join("");
   box.className = "detailBox";
 }
-
 function resetAssignFormForNextBooking() {
   $("assignEvent").value = "";
   $("assignAmbassador").value = "";
@@ -653,12 +684,212 @@ async function createBooking() {
       ? data.warning
       : `Booking created for ${ambassadorName} — ${eventName}. The form has been cleared for the next booking.`;
 
+    unconfirmedBookings = [];
     resetAssignFormForNextBooking();
     showAssignMessage(successText, data.warning ? "error" : "ok");
   } catch (err) {
     showAssignMessage(err.message, "error");
   } finally {
     setCreateBookingButton(false);
+  }
+}
+
+async function loadConfirmData() {
+  hideConfirmMessage();
+  setConfirmBookingButton(true);
+  showConfirmMessage("Loading unconfirmed bookings...", "ok");
+
+  try {
+    const res = await fetch("/api/bookings?status=unconfirmed");
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || "Could not load unconfirmed bookings.");
+
+    unconfirmedBookings = data.bookings || [];
+    selectedConfirmBookingId = "";
+    $("confirmSearch").value = "";
+    $("confirmPayRate").value = "";
+
+    renderConfirmResults();
+    renderSelectedConfirmBooking();
+    renderConfirmBookingDetails();
+
+    if (unconfirmedBookings.length === 0) {
+      showConfirmMessage("No unconfirmed bookings found.", "ok");
+    } else {
+      hideConfirmMessage();
+    }
+  } catch (err) {
+    showConfirmMessage(err.message, "error");
+  } finally {
+    setConfirmBookingButton(false);
+  }
+}
+
+function confirmBookingDisplayName(booking) {
+  const main = booking.assignment || booking.eventName || "Untitled Booking";
+  const ambassador = booking.ambassadorName || "";
+  const dateTime = booking.shiftTime || booking.eventDate || "";
+  return [main, ambassador, dateTime].filter(Boolean).join(" — ");
+}
+
+function confirmBookingSearchText(booking) {
+  return [
+    booking.assignment,
+    booking.eventName,
+    booking.ambassadorName,
+    booking.ambassadorEmail,
+    booking.eventPayRate,
+    booking.shiftTime,
+    booking.eventDate,
+    booking.storeName,
+    booking.storeAddress
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function renderConfirmResults() {
+  const results = $("confirmResults");
+  if (!results) return;
+
+  const search = $("confirmSearch").value.trim().toLowerCase();
+
+  const matches = unconfirmedBookings
+    .filter((booking) => !search || confirmBookingSearchText(booking).includes(search))
+    .slice(0, 20);
+
+  if (matches.length === 0) {
+    results.innerHTML = `<div class="resultEmpty">No matching unconfirmed bookings found.</div>`;
+    results.className = "searchResults";
+    return;
+  }
+
+  results.innerHTML = matches.map((booking) => `
+    <button type="button" class="resultItem" data-confirm-booking-id="${escapeHtml(booking.id)}">
+      <strong>${escapeHtml(booking.assignment || booking.eventName || "Untitled Booking")}</strong>
+      <span>${escapeHtml([booking.ambassadorName || "", booking.shiftTime || booking.eventDate || "", booking.storeName || ""].filter(Boolean).join(" • "))}</span>
+      ${booking.eventPayRate ? `<em>Event rate: ${escapeHtml(booking.eventPayRate)}</em>` : ""}
+    </button>
+  `).join("");
+
+  results.className = "searchResults";
+}
+
+function selectConfirmBooking(bookingId) {
+  const booking = unconfirmedBookings.find((item) => item.id === bookingId);
+  if (!booking) return;
+
+  selectedConfirmBookingId = booking.id;
+  $("confirmSearch").value = confirmBookingDisplayName(booking);
+  $("confirmResults").className = "searchResults hidden";
+  $("confirmPayRate").value = booking.payRateSnapshot || "";
+
+  hideConfirmMessage();
+  renderSelectedConfirmBooking();
+  renderConfirmBookingDetails();
+}
+
+function renderSelectedConfirmBooking() {
+  const box = $("selectedConfirmBookingBox");
+  const booking = unconfirmedBookings.find((item) => item.id === selectedConfirmBookingId);
+
+  if (!booking) {
+    box.className = "selectedBox hidden";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = `
+    <div>
+      <div class="boxTitle">Selected Booking</div>
+      <strong>${escapeHtml(booking.assignment || booking.eventName || "Untitled Booking")}</strong>
+      ${booking.ambassadorName ? `<br>${escapeHtml(booking.ambassadorName)}` : ""}
+    </div>
+    <button type="button" class="miniButton" id="clearConfirmBookingBtn">Change</button>
+  `;
+  box.className = "selectedBox";
+
+  $("clearConfirmBookingBtn")?.addEventListener("click", () => {
+    selectedConfirmBookingId = "";
+    $("confirmSearch").value = "";
+    $("confirmPayRate").value = "";
+    renderSelectedConfirmBooking();
+    renderConfirmBookingDetails();
+    renderConfirmResults();
+    $("confirmSearch").focus();
+  });
+}
+function renderConfirmBookingDetails() {
+  const box = $("confirmBookingDetails");
+  const booking = unconfirmedBookings.find((item) => item.id === selectedConfirmBookingId);
+
+  if (!booking) {
+    box.className = "detailBox hidden";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = `
+    <strong>${escapeHtml(booking.assignment || booking.eventName || "Untitled Booking")}</strong><br>
+    ${booking.ambassadorName ? `Ambassador: ${escapeHtml(booking.ambassadorName)}<br>` : ""}
+    ${booking.ambassadorEmail ? `Email: ${escapeHtml(booking.ambassadorEmail)}<br>` : ""}
+    ${booking.shiftTime ? `Shift Time: ${escapeHtml(booking.shiftTime)}<br>` : ""}
+    ${booking.eventDate ? `Date: ${escapeHtml(booking.eventDate)}<br>` : ""}
+    ${booking.storeName ? `Store: ${escapeHtml(booking.storeName)}<br>` : ""}
+    ${booking.storeAddress ? `Address: ${escapeHtml(booking.storeAddress)}<br>` : ""}
+    ${booking.eventPayRate ? `Event Rate Range: ${escapeHtml(booking.eventPayRate)}<br>` : ""}
+    ${booking.payRateSnapshot ? `Current Exact Rate: ${escapeHtml(formatCurrency(booking.payRateSnapshot))}<br>` : ""}
+  `;
+  box.className = "detailBox";
+}
+
+async function confirmBooking() {
+  hideConfirmMessage();
+
+  const bookingId = selectedConfirmBookingId;
+  const payRateRaw = $("confirmPayRate").value;
+  const payRate = Number(payRateRaw);
+
+  if (!bookingId) {
+    return showConfirmMessage("Select a booking.", "error");
+  }
+
+  if (!Number.isFinite(payRate) || payRate <= 0) {
+    return showConfirmMessage("Enter a valid exact pay rate.", "error");
+  }
+
+  setConfirmBookingButton(true);
+  showConfirmMessage("Confirming booking...", "ok");
+
+  try {
+    const res = await fetch("/api/bookings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bookingId,
+        payRate
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not confirm booking.");
+
+    const confirmedBooking = unconfirmedBookings.find((item) => item.id === bookingId);
+    const bookingName = confirmedBooking?.assignment || confirmedBooking?.eventName || "Booking";
+
+    unconfirmedBookings = unconfirmedBookings.filter((item) => item.id !== bookingId);
+    selectedConfirmBookingId = "";
+    $("confirmSearch").value = "";
+    $("confirmPayRate").value = "";
+
+    renderSelectedConfirmBooking();
+    renderConfirmBookingDetails();
+    renderConfirmResults();
+
+    showConfirmMessage(`${bookingName} confirmed at ${formatCurrency(payRate)}. The confirmation email should send from Airtable.`, "ok");
+  } catch (err) {
+    showConfirmMessage(err.message, "error");
+  } finally {
+    setConfirmBookingButton(false);
   }
 }
 
@@ -710,14 +941,32 @@ $("interestList").addEventListener("click", (event) => {
   selectAmbassador(button.dataset.ambassadorId);
 });
 
+$("confirmSearch").addEventListener("input", () => {
+  selectedConfirmBookingId = "";
+  $("confirmPayRate").value = "";
+  renderSelectedConfirmBooking();
+  renderConfirmBookingDetails();
+  renderConfirmResults();
+});
+
+$("confirmSearch").addEventListener("focus", renderConfirmResults);
+
+$("confirmResults").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-confirm-booking-id]");
+  if (!button || button.disabled) return;
+  selectConfirmBooking(button.dataset.confirmBookingId);
+});
+
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".searchLabel")) {
     $("ambassadorResults").className = "searchResults hidden";
     $("eventResults").className = "searchResults hidden";
+    $("confirmResults").className = "searchResults hidden";
   }
 });
 
 $("createBookingBtn").addEventListener("click", createBooking);
+$("confirmBookingBtn").addEventListener("click", confirmBooking);
 
 initTheme();
 loadBrands();
