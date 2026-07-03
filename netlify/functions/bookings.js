@@ -8,7 +8,11 @@ function firstText(value) {
   if (Array.isArray(value)) return value[0] || "";
   return value || "";
 }
-
+function ambassadorNameFromAssignment(assignment) {
+  const text = String(assignment || "");
+  if (!text.includes("—")) return "";
+  return text.split("—").pop().trim();
+}
 function bookingSummary(record) {
   const f = record.fields || {};
 
@@ -20,11 +24,11 @@ function bookingSummary(record) {
     eventIds: linkedIds(f["Event"]),
     ambassadorIds: linkedIds(f["Ambassador"]),
 
-    ambassadorName:
-      firstText(f["Ambassador Name"]) ||
-      firstText(f["Ambassador Full Name"]) ||
-      assignment ||
-      "Booked Ambassador",
+  ambassadorName:
+  firstText(f["Ambassador Name"]) ||
+  firstText(f["Ambassador Full Name"]) ||
+  ambassadorNameFromAssignment(f["Assignment"]) ||
+  "Booked Ambassador",
 
     ambassadorEmail:
       firstText(f["Ambassadors Email"]) ||
