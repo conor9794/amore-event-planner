@@ -162,10 +162,25 @@
           <p>Select a booking, enter the exact pay rate, and send the booking confirmation email.</p>
         </div>
 
+        <label class="searchLabel">
+          Search Booking
+          <input id="confirmSearch" type="text" placeholder="Type ambassador, brand, store, or event..." autocomplete="off" />
+          <div id="confirmResults" class="searchResults hidden"></div>
+        </label>
+
+        <div id="selectedConfirmBookingBox" class="selectedBox hidden"></div>
+
+        <div id="confirmBookingDetails" class="detailBox hidden"></div>
+
+        <label>
+          Exact Pay Rate
+          <input id="confirmPayRate" type="number" min="0" step="0.01" placeholder="Enter exact rate, e.g. 32.50" />
+        </label>
+
         <div id="confirmMessage" class="message hidden"></div>
 
         <div class="actions oneButton">
-          <button type="button" class="primary" disabled>Coming Soon</button>
+          <button type="button" id="confirmBookingBtn" class="primary">Confirm Booking</button>
         </div>
       </section>
     </section>
