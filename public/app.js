@@ -91,11 +91,17 @@ function formatDate(value) {
 }
 
 function switchPage(pageName) {
+  const isAdd = pageName === "add";
   const isAssign = pageName === "assign";
-  $("addEventPage").classList.toggle("active", !isAssign);
+  const isConfirm = pageName === "confirm";
+
+  $("addEventPage").classList.toggle("active", isAdd);
   $("assignPage").classList.toggle("active", isAssign);
-  $("addEventTab").classList.toggle("active", !isAssign);
+  $("confirmPage").classList.toggle("active", isConfirm);
+
+  $("addEventTab").classList.toggle("active", isAdd);
   $("assignTab").classList.toggle("active", isAssign);
+  $("confirmTab").classList.toggle("active", isConfirm);
 
   if (isAssign && plannerEvents.length === 0) {
     loadAssignData();
@@ -660,10 +666,13 @@ $("draftBtn").addEventListener("click", () => submitEvent(false));
 $("publishBtn").addEventListener("click", () => submitEvent(true));
 $("addEventTab").addEventListener("click", () => switchPage("add"));
 $("assignTab").addEventListener("click", () => switchPage("assign"));
+$("confirmTab").addEventListener("click", () => switchPage("confirm"));
+
 $("assignEvent").addEventListener("change", () => {
   selectedEventId = $("assignEvent").value;
   handleEventChange();
 });
+
 $("eventSearch").addEventListener("input", () => {
   selectedEventId = "";
   $("assignEvent").value = "";
@@ -671,35 +680,43 @@ $("eventSearch").addEventListener("input", () => {
   resetEventDependentBoxes();
   renderEventResults();
 });
+
 $("eventSearch").addEventListener("focus", renderEventResults);
+
 $("eventResults").addEventListener("click", (event) => {
   const button = event.target.closest("[data-event-id]");
   if (!button || button.disabled) return;
   selectEvent(button.dataset.eventId);
 });
+
 $("ambassadorSearch").addEventListener("input", () => {
   selectedAmbassadorId = "";
   $("assignAmbassador").value = "";
   renderSelectedAmbassador();
   renderAmbassadorResults();
 });
+
 $("ambassadorSearch").addEventListener("focus", renderAmbassadorResults);
+
 $("ambassadorResults").addEventListener("click", (event) => {
   const button = event.target.closest("[data-ambassador-id]");
   if (!button || button.disabled) return;
   selectAmbassador(button.dataset.ambassadorId);
 });
+
 $("interestList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-ambassador-id]");
   if (!button || button.disabled) return;
   selectAmbassador(button.dataset.ambassadorId);
 });
+
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".searchLabel")) {
     $("ambassadorResults").className = "searchResults hidden";
     $("eventResults").className = "searchResults hidden";
   }
 });
+
 $("createBookingBtn").addEventListener("click", createBooking);
 
 initTheme();
