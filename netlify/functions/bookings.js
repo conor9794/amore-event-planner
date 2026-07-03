@@ -42,9 +42,19 @@ function bookingSummary(record) {
 
     payRateSnapshot: f["Pay Rate Snapshot"] || "",
 
-    shiftTime:
-      firstText(f["Shift Time"]) ||
-      "",
+    shiftTime: firstText(f["Shift Time"]) || "",
+
+scheduledStart:
+  f["Scheduled Start Snapshot"] ||
+  firstText(f["Event Start Time"]) ||
+  firstText(f["Event Start Time (lookup)"]) ||
+  "",
+
+scheduledEnd:
+  f["Scheduled End Snapshot"] ||
+  firstText(f["Event End Time"]) ||
+  firstText(f["Event End Time (lookup)"]) ||
+  "",
 
     eventDate:
       firstText(f["Event Date (formatted)"]) ||
