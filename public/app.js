@@ -833,7 +833,9 @@ function renderConfirmBookingDetails() {
     ${booking.ambassadorName ? `Ambassador: ${escapeHtml(booking.ambassadorName)}<br>` : ""}
     ${booking.ambassadorEmail ? `Email: ${escapeHtml(booking.ambassadorEmail)}<br>` : ""}
     ${booking.shiftTime ? `Shift Time: ${escapeHtml(booking.shiftTime)}<br>` : ""}
-    ${booking.eventDate ? `Date: ${escapeHtml(booking.eventDate)}<br>` : ""}
+${booking.scheduledStart ? `Start: ${escapeHtml(formatDateTime(booking.scheduledStart))}<br>` : ""}
+${booking.scheduledEnd ? `End: ${escapeHtml(formatDateTime(booking.scheduledEnd))}<br>` : ""}
+${booking.eventDate ? `Date: ${escapeHtml(booking.eventDate)}<br>` : ""}
     ${booking.storeName ? `Store: ${escapeHtml(booking.storeName)}<br>` : ""}
     ${booking.storeAddress ? `Address: ${escapeHtml(booking.storeAddress)}<br>` : ""}
     ${booking.eventPayRate ? `Event Rate Range: ${escapeHtml(booking.eventPayRate)}<br>` : ""}
