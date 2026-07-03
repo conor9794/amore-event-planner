@@ -1,4 +1,4 @@
-const { TABLES, listRecords, createRecord } = require("./_airtable");
+const { TABLES, listRecords, createRecord, updateRecord } = require("./_airtable");
 
 function linkedIds(value) {
   return Array.isArray(value) ? value : [];
@@ -16,9 +16,17 @@ function bookingSummary(record) {
     assignment: f["Assignment"] || "",
     eventIds: linkedIds(f["Event"]),
     ambassadorIds: linkedIds(f["Ambassador"]),
+    eventName: firstText(f["Event"]) || "",
     ambassadorName: firstText(f["Ambassador Name"]) || firstText(f["Ambassador"]) || f["Assignment"] || "Booked Ambassador",
     ambassadorEmail: firstText(f["Ambassadors Email"]) || firstText(f["Ambassador Email"]),
+    eventPayRate: firstText(f["Event Pay Rate (lookup)"]) || firstText(f["Event Pay Rate"]) || "",
+    payRateSnapshot: f["Pay Rate Snapshot"] || "",
+    shiftTime: firstText(f["Shift Time"]) || "",
+    eventDate: firstText(f["Event Date"]) || firstText(f["Event Date (formatted)"]) || "",
+    storeName: firstText(f["Store"]) || "",
+    storeAddress: firstText(f["Store Address"]) || firstText(f["Store Address (from Store)"]) || "",
     bookingConfirmed: Boolean(f["Booking Confirmed"]),
+    bookingConfirmedEmailSent: Boolean(f["Booking Confirmed Email Sent"]),
     saveTheDateSent: Boolean(f["Save the Date Sent"])
   };
 }
@@ -40,6 +48,14 @@ async function listBookingsForEvent(eventId) {
   return records.filter((record) => linkedIds((record.fields || {})["Event"]).includes(eventId));
 }
 
+async function listUnconfirmedBookings() {
+  const records = await allBookings();
+  return records.filter((record) => {
+    const f = record.fields || {};
+    return !Boolean(f["Booking Confirmed"]);
+  });
+}
+
 function optionalFieldsFor(body) {
   const fields = {};
   if (body.scheduledStart) fields["Scheduled Start Snapshot"] = body.scheduledStart;
@@ -49,10 +65,29 @@ function optionalFieldsFor(body) {
   return fields;
 }
 
+function parsePayRate(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    throw new Error("Enter a valid exact pay rate.");
+  }
+  return number;
+}
+
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === "GET") {
       const eventId = event.queryStringParameters?.eventId;
+      const status = event.queryStringParameters?.status;
+
+      if (status === "unconfirmed") {
+        const records = await listUnconfirmedBookings();
+        return {
+          statusCode: 200,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookings: records.map(bookingSummary) })
+        };
+      }
+
       if (!eventId) {
         return {
           statusCode: 400,
@@ -66,6 +101,32 @@ exports.handler = async (event) => {
         statusCode: 200,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookings: records.map(bookingSummary) })
+      };
+    }
+
+    if (event.httpMethod === "PATCH") {
+      const body = JSON.parse(event.body || "{}");
+      const { bookingId, payRate } = body;
+
+      if (!bookingId) {
+        return {
+          statusCode: 400,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: "Missing bookingId." })
+        };
+      }
+
+      const exactRate = parsePayRate(payRate);
+
+      const updated = await updateRecord(TABLES.BOOKINGS, bookingId, {
+        "Pay Rate Snapshot": exactRate,
+        "Booking Confirmed": true
+      });
+
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking: bookingSummary(updated) })
       };
     }
 
