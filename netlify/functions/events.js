@@ -12,6 +12,25 @@ function asText(v) {
   return v || "";
 }
 
+function isAirtableRecordId(value) {
+  return /^rec[a-zA-Z0-9]{10,}$/.test(String(value || "").trim());
+}
+
+function safeLinkedText(v) {
+  const values = Array.isArray(v) ? v : [v];
+  return values
+    .map((item) => String(item || "").trim())
+    .filter((item) => item && !isAirtableRecordId(item))
+    .join(", ");
+}
+
+function storeNameFromEventName(eventName) {
+  const text = String(eventName || "");
+  const marker = " @ ";
+  const index = text.indexOf(marker);
+  return index >= 0 ? text.slice(index + marker.length).trim() : "";
+}
+
 function dateSortValue(event) {
   const raw = event.startTime || event.eventDate || event.dateForFilter || "";
   const d = new Date(raw);
@@ -33,16 +52,20 @@ exports.handler = async () => {
         const eventDate = value(f, ["Event Date", "Date"]);
         const endTime = value(f, ["End Time", "Event End Time", "Scheduled End", "Scheduled End Snapshot"]);
         const dateForFilter = startTime || eventDate;
+        const name = asText(value(f, ["Event Name", "Name", "Event", "Title"])) || "Untitled Event";
+        const storeLookup = safeLinkedText(value(f, ["Store Name"]));
+        const store = storeLookup || storeNameFromEventName(name);
+
         return {
           id: record.id,
-          name: asText(value(f, ["Event Name", "Name", "Event", "Title"])) || "Untitled Event",
+          name,
           eventDate,
           startTime,
           endTime,
           hourlyRate: value(f, ["Hourly Rate", "Pay Rate", "Event Pay Rate"]),
           status: value(f, ["Status"]),
-          brand: asText(value(f, ["Brand Name", "Brand"])),
-          store: asText(value(f, ["Store Name", "Store"])),
+          brand: safeLinkedText(value(f, ["Brand Name"])) || asText(value(f, ["Brand"])),
+          store,
           address: asText(value(f, ["Store Address", "Address", "Full Address"])),
           dateForFilter
         };
