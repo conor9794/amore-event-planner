@@ -31,13 +31,14 @@ exports.handler = async () => {
         const f = record.fields || {};
         const startTime = value(f, ["Start Time", "Event Start Time", "Scheduled Start", "Scheduled Start Snapshot"]);
         const eventDate = value(f, ["Event Date", "Date"]);
+        const endTime = value(f, ["End Time", "Event End Time", "Scheduled End", "Scheduled End Snapshot"]);
         const dateForFilter = startTime || eventDate;
         return {
           id: record.id,
           name: asText(value(f, ["Event Name", "Name", "Event", "Title"])) || "Untitled Event",
           eventDate,
           startTime,
-          endTime: value(f, ["End Time", "Event End Time", "Scheduled End", "Scheduled End Snapshot"]),
+          endTime,
           hourlyRate: value(f, ["Hourly Rate", "Pay Rate", "Event Pay Rate"]),
           status: value(f, ["Status"]),
           brand: asText(value(f, ["Brand Name", "Brand"])),
@@ -47,8 +48,10 @@ exports.handler = async () => {
         };
       })
       .filter((event) => {
-        if (!event.dateForFilter) return true;
-        const d = new Date(event.dateForFilter);
+        // Only show complete, schedulable events in the planner.
+        if (!event.eventDate || !event.startTime || !event.endTime) return false;
+
+        const d = new Date(event.startTime || event.eventDate);
         return Number.isNaN(d.getTime()) || d >= now;
       })
       .sort((a, b) => dateSortValue(a) - dateSortValue(b));
