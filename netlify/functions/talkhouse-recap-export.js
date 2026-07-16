@@ -30,4 +30,60 @@ exports.handler = async (event) => {
   }
 
   if (!GOOGLE_WEBHOOK_URL || !SHARED_SECRET) {
-    return json(
+    return json(500, {
+      ok: false,
+      error: "Missing Talkhouse relay environment variables."
+    });
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(event.body || "{}");
+  } catch (_error) {
+    return json(400, { ok: false, error: "Invalid JSON body." });
+  }
+
+  if (payload.secret !== SHARED_SECRET) {
+    return json(401, { ok: false, error: "Unauthorized request." });
+  }
+
+  try {
+    const googleResponse = await fetch(GOOGLE_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      redirect: "follow"
+    });
+
+    const responseText = await googleResponse.text();
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (_error) {
+      return json(502, {
+        ok: false,
+        error: "Google webhook returned a non-JSON response.",
+        status: googleResponse.status,
+        responsePreview: responseText.slice(0, 500)
+      });
+    }
+
+    if (!googleResponse.ok || !result.ok) {
+      return json(502, {
+        ok: false,
+        error: result.error || `Google webhook failed with HTTP ${googleResponse.status}`,
+        googleStatus: googleResponse.status
+      });
+    }
+
+    return json(200, result);
+  } catch (error) {
+    return json(500, {
+      ok: false,
+      error: String(error.message || error)
+    });
+  }
+};
