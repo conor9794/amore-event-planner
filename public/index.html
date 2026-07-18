@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Amore Event Planner</title>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/recap-review.css" />
 </head>
 <body>
   <main class="app">
@@ -16,13 +17,14 @@
         </div>
         <button type="button" id="themeToggle" class="themeToggle" aria-label="Toggle dark mode">Dark</button>
       </div>
-      <p>Create events, publish them to the rep portal, and assign ambassadors from one mobile page.</p>
+      <p>Create events, publish them to the rep portal, assign ambassadors, and review completed recaps.</p>
     </header>
 
     <nav class="tabs" aria-label="Planner pages">
       <button type="button" id="addEventTab" class="tab active">Add Event</button>
       <button type="button" id="assignTab" class="tab">Assign Ambassador</button>
       <button type="button" id="confirmTab" class="tab">Confirm Booking</button>
+      <button type="button" id="recapTab" class="tab">Recap Review</button>
     </nav>
 
     <section id="addEventPage" class="page active">
@@ -116,7 +118,6 @@
         </select>
 
         <div id="selectedEventBox" class="selectedBox hidden"></div>
-
         <div id="eventDetails" class="detailBox hidden"></div>
 
         <div id="bookedBox" class="detailBox hidden">
@@ -169,7 +170,6 @@
         </label>
 
         <div id="selectedConfirmBookingBox" class="selectedBox hidden"></div>
-
         <div id="confirmBookingDetails" class="detailBox hidden"></div>
 
         <label>
@@ -184,8 +184,33 @@
         </div>
       </section>
     </section>
+
+    <section id="recapPage" class="page">
+      <section class="card">
+        <div class="sectionIntro">
+          <h2>Recap Review</h2>
+          <p>Review actual hours, event results, photos, expenses, and pay before sending a booking to payroll.</p>
+        </div>
+
+        <div class="recapToolbar">
+          <label>
+            Search Recaps
+            <input id="recapSearch" type="search" placeholder="Event, ambassador, brand, or store..." />
+          </label>
+          <button type="button" id="refreshRecapsBtn" class="recapRefresh">Refresh</button>
+        </div>
+
+        <div id="recapMessage" class="message hidden"></div>
+        <div id="recapSpinner" class="recapSpinner hidden" aria-label="Loading recaps"></div>
+        <div id="recapEmpty" class="recapEmpty hidden"></div>
+        <div id="recapList" class="recapList"></div>
+      </section>
+    </section>
   </main>
 
+  <div id="recapToast" class="recapToast hidden" role="status"></div>
+
   <script src="/app.js"></script>
+  <script src="/recap-review.js"></script>
 </body>
 </html>
