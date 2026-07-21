@@ -31,6 +31,10 @@ function text(fields, names) {
   return Array.isArray(found) ? found.join(", ") : (found || "");
 }
 
+function isRecordId(item) {
+  return /^rec[A-Za-z0-9]{10,}$/.test(String(item || ""));
+}
+
 function attachments(value) {
   if (!Array.isArray(value)) return [];
   return value.map((item) => ({
@@ -103,13 +107,17 @@ async function listRecaps() {
   const ambassadorIds = bookings.flatMap((record) => linkedIds(record.fields?.Ambassador));
   const timeEntryIds = bookings.flatMap((record) => linkedIds(record.fields?.["Time Entry"]));
 
-  const [events, ambassadors, timeEntries] = await Promise.all([
-    recordsByIds(TABLES.EVENTS, eventIds),
+  const events = await recordsByIds(TABLES.EVENTS, eventIds);
+  const brandIds = events.flatMap((record) => linkedIds(value(record.fields, ["Brand"])));
+
+  const [brands, ambassadors, timeEntries] = await Promise.all([
+    recordsByIds(TABLES.BRANDS, brandIds),
     recordsByIds(TABLES.AMBASSADORS, ambassadorIds),
     recordsByIds(TIME_ENTRY_TABLE, timeEntryIds)
   ]);
 
   const eventById = Object.fromEntries(events.map((record) => [record.id, record.fields || {}]));
+  const brandById = Object.fromEntries(brands.map((record) => [record.id, text(record.fields, ["Brand Name", "Name"]) ]));
   const ambassadorById = Object.fromEntries(ambassadors.map((record) => [record.id, record.fields || {}]));
   const entriesByBookingId = {};
 
@@ -132,6 +140,13 @@ async function listRecaps() {
     const payRate = numberOrNull(fields["Pay Rate Snapshot"]);
     const totalPay = hours !== null && payRate !== null ? Math.round(hours * payRate * 100) / 100 : null;
 
+    const linkedBrandNames = linkedIds(value(eventFields, ["Brand"]))
+      .map((id) => brandById[id])
+      .filter(Boolean)
+      .join(", ");
+    const directBrand = text(eventFields, ["Brand Name"]);
+    const safeDirectBrand = isRecordId(directBrand) ? "" : directBrand;
+
     const talkhouseSales = [
       ["Blood Orange", recapFields["Talkhouse - Blood Orange 4-Packs Sold"]],
       ["Grapefruit", recapFields["Talkhouse - Grapefruit 4-Packs Sold"]],
@@ -148,7 +163,7 @@ async function listRecaps() {
       assignment: fields.Assignment || "",
       event: {
         name: text(eventFields, ["Event Name", "Name", "Event", "Title"]) || fields.Assignment || "Untitled Event",
-        brand: text(eventFields, ["Brand Name", "Brand"]),
+        brand: safeDirectBrand || linkedBrandNames,
         store: text(eventFields, ["Store Name", "Store", "Account Name"]),
         date: value(eventFields, ["Event Date", "Date"]) || null
       },
