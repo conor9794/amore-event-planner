@@ -16,6 +16,11 @@ function isAirtableRecordId(value) {
   return /^rec[a-zA-Z0-9]{10,}$/.test(String(value || "").trim());
 }
 
+function linkedIds(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return values.map((item) => String(item || "").trim()).filter(isAirtableRecordId);
+}
+
 function safeLinkedText(v) {
   const values = Array.isArray(v) ? v : [v];
   return values
@@ -39,8 +44,17 @@ function dateSortValue(event) {
 
 exports.handler = async () => {
   try {
-    // Do not sort in Airtable. Different bases may use Start Time, Event Start Time, etc.
-    const records = await listRecords(TABLES.EVENTS);
+    const [records, brandRecords] = await Promise.all([
+      listRecords(TABLES.EVENTS),
+      listRecords(TABLES.BRANDS)
+    ]);
+
+    const brandNameById = Object.fromEntries(
+      brandRecords.map((record) => [
+        record.id,
+        record.fields?.["Brand Name"] || record.fields?.Name || ""
+      ])
+    );
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -55,6 +69,9 @@ exports.handler = async () => {
         const name = asText(value(f, ["Event Name", "Name", "Event", "Title"])) || "Untitled Event";
         const storeLookup = safeLinkedText(value(f, ["Store Name"]));
         const store = storeLookup || storeNameFromEventName(name);
+        const brandLookup = safeLinkedText(value(f, ["Brand Name"]));
+        const brandIds = linkedIds(value(f, ["Brand"]));
+        const resolvedBrand = brandIds.map((id) => brandNameById[id]).filter(Boolean).join(", ");
 
         return {
           id: record.id,
@@ -64,16 +81,14 @@ exports.handler = async () => {
           endTime,
           hourlyRate: value(f, ["Hourly Rate", "Pay Rate", "Event Pay Rate"]),
           status: value(f, ["Status"]),
-          brand: safeLinkedText(value(f, ["Brand Name"])) || asText(value(f, ["Brand"])),
+          brand: brandLookup || resolvedBrand || safeLinkedText(value(f, ["Brand"])),
           store,
           address: asText(value(f, ["Store Address", "Address", "Full Address"])),
           dateForFilter
         };
       })
       .filter((event) => {
-        // Only show complete, schedulable events in the planner.
         if (!event.eventDate || !event.startTime || !event.endTime) return false;
-
         const d = new Date(event.startTime || event.eventDate);
         return Number.isNaN(d.getTime()) || d >= now;
       })
