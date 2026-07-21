@@ -6,6 +6,7 @@
   <title>Amore Event Planner</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/recap-review.css" />
+  <link rel="stylesheet" href="/todays-events.css" />
 </head>
 <body>
   <main class="app">
@@ -17,13 +18,14 @@
         </div>
         <button type="button" id="themeToggle" class="themeToggle" aria-label="Toggle dark mode">Dark</button>
       </div>
-      <p>Create events, publish them to the rep portal, assign ambassadors, and review completed recaps.</p>
+      <p>Create events, assign ambassadors, monitor today's schedule, and review completed recaps.</p>
     </header>
 
     <nav class="tabs" aria-label="Planner pages">
       <button type="button" id="addEventTab" class="tab active">Add Event</button>
       <button type="button" id="assignTab" class="tab">Assign Ambassador</button>
       <button type="button" id="confirmTab" class="tab">Confirm Booking</button>
+      <button type="button" id="todayTab" class="tab">Today's Events</button>
       <button type="button" id="recapTab" class="tab">Recap Review</button>
     </nav>
 
@@ -185,6 +187,42 @@
       </section>
     </section>
 
+    <section id="todayPage" class="page">
+      <section class="card">
+        <div class="sectionIntro">
+          <h2>Today's Events</h2>
+          <p>See every confirmed event happening today in its store's local timezone and quickly identify who is checked in, late, upcoming, or completed.</p>
+        </div>
+
+        <div id="todayCounts" class="todayCounts"></div>
+        <div id="todayUpdated" class="todayUpdated"></div>
+
+        <div class="todayToolbar">
+          <label>
+            Search Today's Events
+            <input id="todaySearch" type="search" placeholder="Event, ambassador, brand, or store..." />
+          </label>
+          <div class="todayToolbarActions">
+            <label>
+              Status
+              <select id="todayStatusFilter">
+                <option value="all">All statuses</option>
+                <option value="late">Late / Not Checked In</option>
+                <option value="checked-in">Checked In</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="completed">Completed</option>
+              </select>
+            </label>
+            <button type="button" id="refreshTodayBtn" class="todayRefresh">Refresh</button>
+          </div>
+        </div>
+
+        <div id="todayMessage" class="message hidden"></div>
+        <div id="todayEmpty" class="todayEmpty hidden"></div>
+        <div id="todayList" class="todayList"></div>
+      </section>
+    </section>
+
     <section id="recapPage" class="page">
       <section class="card">
         <div class="sectionIntro">
@@ -213,5 +251,6 @@
   <script src="/app.js"></script>
   <script src="/recap-review.js"></script>
   <script src="/recap-payroll-scheduled.js"></script>
+  <script src="/todays-events.js"></script>
 </body>
 </html>
