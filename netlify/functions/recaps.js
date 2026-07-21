@@ -18,6 +18,19 @@ function linkedIds(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
 
+function value(fields, names) {
+  for (const name of names) {
+    const candidate = fields?.[name];
+    if (candidate !== undefined && candidate !== null && candidate !== "") return candidate;
+  }
+  return "";
+}
+
+function text(fields, names) {
+  const found = value(fields, names);
+  return Array.isArray(found) ? found.join(", ") : (found || "");
+}
+
 function attachments(value) {
   if (!Array.isArray(value)) return [];
   return value.map((item) => ({
@@ -29,8 +42,19 @@ function attachments(value) {
 }
 
 function numberOrNull(value) {
+  if (value === "" || value === null || value === undefined) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function scheduledHours(startValue, endValue) {
+  if (!startValue || !endValue) return null;
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  let hours = (end.getTime() - start.getTime()) / 3600000;
+  if (hours < 0) hours += 24;
+  return Math.round(hours * 2) / 2;
 }
 
 function buildIdFormula(ids) {
@@ -43,20 +67,17 @@ async function getRecord(table, recordId) {
   return airtableRequest(`${encodeURIComponent(table)}/${recordId}`);
 }
 
-async function recordsByIds(table, ids, fields) {
+async function recordsByIds(table, ids) {
   const unique = [...new Set(ids)].filter(Boolean);
   const results = [];
-
   for (let index = 0; index < unique.length; index += 35) {
     const chunk = unique.slice(index, index + 35);
     const records = await listRecords(table, {
       filterByFormula: buildIdFormula(chunk),
-      "fields[]": fields,
       maxRecords: "1000"
     });
     results.push(...records);
   }
-
   return results;
 }
 
@@ -64,36 +85,15 @@ function latestClockOut(entries) {
   return entries
     .filter((entry) => entry.fields?.["Entry Type"] === "Clock Out")
     .sort((a, b) => {
-      const aTime = new Date(a.fields?.["Effective Timestamp"] || a.fields?.["Submitted At"] || 0).getTime();
-      const bTime = new Date(b.fields?.["Effective Timestamp"] || b.fields?.["Submitted At"] || 0).getTime();
+      const aTime = new Date(value(a.fields, ["Effective Timestamp", "Submitted At"]) || 0).getTime();
+      const bTime = new Date(value(b.fields, ["Effective Timestamp", "Submitted At"]) || 0).getTime();
       return bTime - aTime;
     })[0] || null;
 }
 
 async function listRecaps() {
-  const bookingFields = [
-    "Assignment",
-    "Event",
-    "Ambassador",
-    "Ambassadors Email",
-    "Scheduled Start Snapshot",
-    "Scheduled End Snapshot",
-    "Clock In Timestamp",
-    "Clock Out Timestamp",
-    "Actual Hours Worked",
-    "Actual Total Pay",
-    "Pay Rate Snapshot",
-    "Recap Notes",
-    "Recap Photos",
-    "Expense Amount",
-    "Expense Receipt",
-    "Recap Submitted Timestamp",
-    "Time Entry"
-  ];
-
   const bookings = await listRecords(TABLES.BOOKINGS, {
     filterByFormula: "AND({Recap Submitted Timestamp},NOT({Recap Approved}),NOT({Paid}))",
-    "fields[]": bookingFields,
     "sort[0][field]": "Recap Submitted Timestamp",
     "sort[0][direction]": "asc",
     maxRecords: "1000"
@@ -104,39 +104,9 @@ async function listRecaps() {
   const timeEntryIds = bookings.flatMap((record) => linkedIds(record.fields?.["Time Entry"]));
 
   const [events, ambassadors, timeEntries] = await Promise.all([
-    recordsByIds(TABLES.EVENTS, eventIds, ["Event Name", "Brand Name", "Store Name", "Event Date"]),
-    recordsByIds(TABLES.AMBASSADORS, ambassadorIds, ["Ambassador Name"]),
-    recordsByIds(TIME_ENTRY_TABLE, timeEntryIds, [
-      "Booking",
-      "Entry Type",
-      "Submitted At",
-      "Effective Timestamp",
-      "Recap Photos",
-      "Event Photos",
-      "Recap Notes",
-      "Event Feedback",
-      "Expense Amount",
-      "Expense Receipt",
-      "Leftover Inventory",
-      "Store Contact Name",
-      "Products Sampled.",
-      "Consumers Seen",
-      "Consumers Sampled",
-      "Product Price",
-      "Product Sold",
-      "Table Location",
-      "GPS Map Link",
-      "Talkhouse - Flavors Carried",
-      "Talkhouse - Blood Orange 4-Packs Sold",
-      "Talkhouse - Grapefruit 4-Packs Sold",
-      "Talkhouse - Pineapple 4-Packs Sold",
-      "Talkhouse - Lime 4-Packs Sold",
-      "Talkhouse - Cranberry 4-Packs Sold",
-      "Talkhouse - Hampton Blue 4-Packs Sold",
-      "Talkhouse - Iced Tea Lemonade 4-Packs Sold",
-      "Talkhouse - Variety Packs Sold",
-      "Talkhouse - Sold Out Details"
-    ])
+    recordsByIds(TABLES.EVENTS, eventIds),
+    recordsByIds(TABLES.AMBASSADORS, ambassadorIds),
+    recordsByIds(TIME_ENTRY_TABLE, timeEntryIds)
   ]);
 
   const eventById = Object.fromEntries(events.map((record) => [record.id, record.fields || {}]));
@@ -154,13 +124,13 @@ async function listRecaps() {
     const fields = booking.fields || {};
     const eventFields = eventById[linkedIds(fields.Event)[0]] || {};
     const ambassadorFields = ambassadorById[linkedIds(fields.Ambassador)[0]] || {};
-    const clockOut = latestClockOut(entriesByBookingId[booking.id] || []);
-    const recapFields = clockOut?.fields || {};
+    const recapFields = latestClockOut(entriesByBookingId[booking.id] || [])?.fields || {};
 
-    const recapPhotos = attachments(recapFields["Event Photos"] || recapFields["Recap Photos"] || fields["Recap Photos"]);
-    const expenseReceipts = attachments(recapFields["Expense Receipt"] || fields["Expense Receipt"]);
-    const actualHours = numberOrNull(fields["Actual Hours Worked"]);
-    const actualPay = numberOrNull(fields["Actual Total Pay"]);
+    const scheduledStart = value(fields, ["Scheduled Start Snapshot", "Event Start Time", "Event Start Time (lookup)"]) || null;
+    const scheduledEnd = value(fields, ["Scheduled End Snapshot", "Event End Time", "Event End Time (lookup)"]) || null;
+    const hours = scheduledHours(scheduledStart, scheduledEnd);
+    const payRate = numberOrNull(fields["Pay Rate Snapshot"]);
+    const totalPay = hours !== null && payRate !== null ? Math.round(hours * payRate * 100) / 100 : null;
 
     const talkhouseSales = [
       ["Blood Orange", recapFields["Talkhouse - Blood Orange 4-Packs Sold"]],
@@ -171,56 +141,56 @@ async function listRecaps() {
       ["Hampton Blue", recapFields["Talkhouse - Hampton Blue 4-Packs Sold"]],
       ["Iced Tea Lemonade", recapFields["Talkhouse - Iced Tea Lemonade 4-Packs Sold"]],
       ["Variety Packs", recapFields["Talkhouse - Variety Packs Sold"]]
-    ].filter(([, value]) => value !== undefined && value !== null && value !== "");
+    ].filter(([, item]) => item !== undefined && item !== null && item !== "");
 
     return {
       bookingId: booking.id,
       assignment: fields.Assignment || "",
       event: {
-        name: eventFields["Event Name"] || fields.Assignment || "Untitled Event",
-        brand: first(eventFields["Brand Name"]),
-        store: first(eventFields["Store Name"]),
-        date: eventFields["Event Date"] || null
+        name: text(eventFields, ["Event Name", "Name", "Event", "Title"]) || fields.Assignment || "Untitled Event",
+        brand: text(eventFields, ["Brand Name", "Brand"]),
+        store: text(eventFields, ["Store Name", "Store", "Account Name"]),
+        date: value(eventFields, ["Event Date", "Date"]) || null
       },
       ambassador: {
-        name: ambassadorFields["Ambassador Name"] || "",
-        email: first(fields["Ambassadors Email"])
+        name: text(ambassadorFields, ["Ambassador Name", "Full Name", "Name"]),
+        email: first(value(fields, ["Ambassadors Email", "Ambassador Email"]))
       },
       time: {
-        scheduledStart: fields["Scheduled Start Snapshot"] || null,
-        scheduledEnd: fields["Scheduled End Snapshot"] || null,
-        clockIn: fields["Clock In Timestamp"] || null,
-        clockOut: fields["Clock Out Timestamp"] || null,
-        actualHours
+        scheduledStart,
+        scheduledEnd,
+        clockIn: value(fields, ["Clock In Timestamp"]) || null,
+        clockOut: value(fields, ["Clock Out Timestamp"]) || null,
+        actualHours: numberOrNull(fields["Actual Hours Worked"])
       },
       recap: {
-        submittedAt: fields["Recap Submitted Timestamp"] || recapFields["Effective Timestamp"] || null,
-        notes: recapFields["Recap Notes"] || fields["Recap Notes"] || "",
-        feedback: recapFields["Event Feedback"] || "",
-        photos: recapPhotos,
-        productsSampled: recapFields["Products Sampled."] || "",
-        consumersSeen: numberOrNull(recapFields["Consumers Seen"]),
-        consumersSampled: numberOrNull(recapFields["Consumers Sampled"]),
-        productPrice: recapFields["Product Price"] || "",
-        productSold: recapFields["Product Sold"] || "",
-        tableLocation: recapFields["Table Location"] || "",
-        leftoverInventory: recapFields["Leftover Inventory"] || "",
-        storeContactName: recapFields["Store Contact Name"] || "",
-        gpsMapLink: recapFields["GPS Map Link"] || "",
+        submittedAt: value(fields, ["Recap Submitted Timestamp"]) || value(recapFields, ["Effective Timestamp", "Submitted At"]) || null,
+        notes: text(recapFields, ["Recap Notes"]) || text(fields, ["Recap Notes"]),
+        feedback: text(recapFields, ["Event Feedback"]),
+        photos: attachments(value(recapFields, ["Event Photos", "Recap Photos"]) || fields["Recap Photos"]),
+        productsSampled: text(recapFields, ["Products Sampled.", "Products Sampled"]),
+        consumersSeen: numberOrNull(value(recapFields, ["Consumers Seen"])),
+        consumersSampled: numberOrNull(value(recapFields, ["Consumers Sampled"])),
+        productPrice: text(recapFields, ["Product Price"]),
+        productSold: text(recapFields, ["Product Sold"]),
+        tableLocation: text(recapFields, ["Table Location"]),
+        leftoverInventory: text(recapFields, ["Leftover Inventory"]),
+        storeContactName: text(recapFields, ["Store Contact Name"]),
+        gpsMapLink: text(recapFields, ["GPS Map Link"]),
         talkhouse: {
-          flavorsCarried: recapFields["Talkhouse - Flavors Carried"] || [],
+          flavorsCarried: value(recapFields, ["Talkhouse - Flavors Carried"]) || [],
           sales: talkhouseSales,
-          soldOutDetails: recapFields["Talkhouse - Sold Out Details"] || ""
+          soldOutDetails: text(recapFields, ["Talkhouse - Sold Out Details"])
         }
       },
       expense: {
-        amount: numberOrNull(recapFields["Expense Amount"] ?? fields["Expense Amount"]),
-        receipts: expenseReceipts
+        amount: numberOrNull(value(recapFields, ["Expense Amount"]) || fields["Expense Amount"]),
+        receipts: attachments(value(recapFields, ["Expense Receipt"]) || fields["Expense Receipt"])
       },
       payroll: {
-        payRate: numberOrNull(fields["Pay Rate Snapshot"]),
-        actualHours,
-        totalPay: actualPay
+        payRate,
+        scheduledHours: hours,
+        totalPay
       }
     };
   });
@@ -239,26 +209,11 @@ async function approveRecap(event) {
     return json(400, { error: "A valid bookingId is required." });
   }
 
-  let booking;
-  try {
-    booking = await getRecord(TABLES.BOOKINGS, bookingId);
-  } catch (error) {
-    if (String(error.message || "").toLowerCase().includes("not found")) {
-      return json(404, { error: "Booking not found." });
-    }
-    throw error;
-  }
-
+  const booking = await getRecord(TABLES.BOOKINGS, bookingId);
   const fields = booking.fields || {};
-  if (!fields["Recap Submitted Timestamp"]) {
-    return json(409, { error: "This booking has no submitted recap yet." });
-  }
-  if (fields["Recap Approved"]) {
-    return json(409, { error: "This recap has already been approved." });
-  }
-  if (fields.Paid) {
-    return json(409, { error: "This booking has already been paid." });
-  }
+  if (!fields["Recap Submitted Timestamp"]) return json(409, { error: "This booking has no submitted recap yet." });
+  if (fields["Recap Approved"]) return json(409, { error: "This recap has already been approved." });
+  if (fields.Paid) return json(409, { error: "This booking has already been paid." });
 
   await updateRecord(TABLES.BOOKINGS, bookingId, { "Recap Approved": true });
   return json(200, { success: true, bookingId });
@@ -266,12 +221,8 @@ async function approveRecap(event) {
 
 exports.handler = async (event) => {
   try {
-    if (event.httpMethod === "GET") {
-      return json(200, { recaps: await listRecaps() });
-    }
-    if (event.httpMethod === "PATCH" || event.httpMethod === "POST") {
-      return approveRecap(event);
-    }
+    if (event.httpMethod === "GET") return json(200, { recaps: await listRecaps() });
+    if (event.httpMethod === "PATCH" || event.httpMethod === "POST") return approveRecap(event);
     return json(405, { error: "Method not allowed." });
   } catch (error) {
     console.error("recaps error", error);
