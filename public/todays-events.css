@@ -1,0 +1,176 @@
+.todayToolbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.todayToolbar label {
+  margin-bottom: 0;
+}
+
+.todayToolbarActions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.todayRefresh {
+  background: var(--soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 13px 14px;
+}
+
+.todayUpdated {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.todayCounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.todayCount {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--box-bg);
+  padding: 12px;
+}
+
+.todayCount strong,
+.todayCount span {
+  display: block;
+}
+
+.todayCount strong {
+  font-size: 24px;
+  color: var(--text);
+}
+
+.todayCount span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.todayCount.late {
+  border-color: #ef4444;
+}
+
+.todayCount.checked-in {
+  border-color: #22c55e;
+}
+
+.todayList {
+  display: grid;
+  gap: 10px;
+}
+
+.todayEvent {
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: 16px;
+  background: var(--input-bg);
+  padding: 14px;
+}
+
+.todayEvent.upcoming { border-left-color: #64748b; }
+.todayEvent.checked-in { border-left-color: #22c55e; }
+.todayEvent.late { border-left-color: #ef4444; }
+.todayEvent.completed { border-left-color: #3b82f6; }
+
+.todayEventTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.todayEventTop strong,
+.todayEventTop span {
+  display: block;
+}
+
+.todayEventTop > div > strong {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.todayEventTop > div > span {
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.todayBadge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 7px 9px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  max-width: 120px;
+}
+
+.todayBadge.upcoming { background: #e2e8f0; color: #334155; }
+.todayBadge.checked-in { background: #dcfce7; color: #166534; }
+.todayBadge.late { background: #fee2e2; color: #991b1b; }
+.todayBadge.completed { background: #dbeafe; color: #1e40af; }
+
+.todayEventGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.todayEventGrid > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.todayEventGrid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.todayEventGrid strong {
+  color: var(--text);
+  font-size: 13px;
+  text-align: right;
+}
+
+.todayEmpty {
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 700;
+}
+
+@media (min-width: 520px) {
+  .todayCounts {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .todayEventGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
