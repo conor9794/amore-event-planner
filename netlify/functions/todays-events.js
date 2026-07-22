@@ -84,6 +84,13 @@ function localDateKey(date, timeZone) {
   return `${map.year}-${map.month}-${map.day}`;
 }
 
+function validDateKey(candidate) {
+  const dateKey = String(candidate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return "";
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) ? "" : dateKey;
+}
+
 function localTimeLabel(value, timeZone) {
   if (!value) return "";
   const date = new Date(value);
@@ -105,8 +112,16 @@ function statusFor(fields, scheduledStart, now) {
   return "upcoming";
 }
 
-exports.handler = async () => {
+exports.handler = async (event) => {
   try {
+    const now = new Date();
+    const requestedDate = event?.queryStringParameters?.date;
+    const selectedDate = validDateKey(requestedDate) || localDateKey(now, "America/New_York");
+
+    if (requestedDate && !validDateKey(requestedDate)) {
+      return json(400, { error: "Date must use YYYY-MM-DD format." });
+    }
+
     const bookings = await listRecords(TABLES.BOOKINGS, { maxRecords: "1000" });
     const eligible = bookings.filter((record) => {
       const fields = record.fields || {};
@@ -131,7 +146,6 @@ exports.handler = async () => {
     const ambassadorById = Object.fromEntries(ambassadors.map((record) => [record.id, record.fields || {}]));
     const storeById = Object.fromEntries(stores.map((record) => [record.id, record.fields || {}]));
     const brandById = Object.fromEntries(brands.map((record) => [record.id, record.fields || {}]));
-    const now = new Date();
 
     const items = eligible.map((booking) => {
       const fields = booking.fields || {};
@@ -144,8 +158,8 @@ exports.handler = async () => {
       const explicitZone = validTimeZone(value(storeFields, ["Store Timezone", "Timezone", "Time Zone", "IANA Timezone"]));
       const timeZone = explicitZone || stateToTimeZone(value(storeFields, ["State", "Store State"]));
       const startDate = new Date(scheduledStart);
-      const isToday = scheduledStart && !Number.isNaN(startDate.getTime()) && localDateKey(startDate, timeZone) === localDateKey(now, timeZone);
-      if (!isToday) return null;
+      const isSelectedDate = scheduledStart && !Number.isNaN(startDate.getTime()) && localDateKey(startDate, timeZone) === selectedDate;
+      if (!isSelectedDate) return null;
 
       const eventName = text(eventFields, ["Event Name", "Name", "Event", "Title"]) || fields.Assignment || "Untitled Event";
       const storeName = text(storeFields, ["Store Name", "Name"]) || text(eventFields, ["Store Name", "Account Name"]);
@@ -177,9 +191,9 @@ exports.handler = async () => {
       return totals;
     }, { total: 0, upcoming: 0, "checked-in": 0, late: 0, completed: 0 });
 
-    return json(200, { generatedAt: now.toISOString(), counts, events: items });
+    return json(200, { generatedAt: now.toISOString(), selectedDate, counts, events: items });
   } catch (error) {
     console.error("todays-events error", error);
-    return json(500, { error: error.message || "Could not load today's events." });
+    return json(500, { error: error.message || "Could not load events." });
   }
 };
