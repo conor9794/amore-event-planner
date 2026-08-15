@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/recap-review.css" />
   <link rel="stylesheet" href="/todays-events.css" />
+  <link rel="stylesheet" href="/payroll.css" />
 </head>
 <body>
   <main class="app">
@@ -27,6 +28,7 @@
       <button type="button" id="confirmTab" class="tab">Confirm Booking</button>
       <button type="button" id="todayTab" class="tab">Today's Events</button>
       <button type="button" id="recapTab" class="tab">Recap Review</button>
+      <button type="button" id="payrollTab" class="tab">Payroll</button>
     </nav>
 
     <section id="addEventPage" class="page active">
@@ -244,13 +246,37 @@
         <div id="recapList" class="recapList"></div>
       </section>
     </section>
+
+    <section id="payrollPage" class="page">
+      <section class="card">
+        <div class="sectionIntro">
+          <h2>Ready for Payroll</h2>
+          <p>Review approved bookings, confirm the scheduled payment, and mark each booking paid after payment is sent.</p>
+        </div>
+
+        <div class="payrollToolbar">
+          <label>
+            Search Payroll
+            <input id="payrollSearch" type="search" placeholder="Ambassador, event, brand, or store..." />
+          </label>
+          <button type="button" id="refreshPayrollBtn" class="payrollRefresh">Refresh</button>
+        </div>
+
+        <div id="payrollSummary" class="payrollSummary"></div>
+        <div id="payrollMessage" class="message hidden"></div>
+        <div id="payrollEmpty" class="payrollEmpty hidden"></div>
+        <div id="payrollList" class="payrollList"></div>
+      </section>
+    </section>
   </main>
 
   <div id="recapToast" class="recapToast hidden" role="status"></div>
+  <div id="payrollToast" class="recapToast hidden" role="status"></div>
 
   <script src="/app.js"></script>
   <script src="/recap-review.js"></script>
   <script src="/recap-payroll-scheduled.js"></script>
   <script src="/todays-events.js"></script>
+  <script src="/payroll.js"></script>
 </body>
 </html>
