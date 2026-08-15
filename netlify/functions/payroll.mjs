@@ -21,6 +21,16 @@ function text(value) {
   return value || "";
 }
 
+function linkedIds(value) {
+  return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
+function buildIdFormula(ids) {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return "FALSE()";
+  return `OR(${unique.map((id) => `RECORD_ID()='${id}'`).join(",")})`;
+}
+
 export function scheduledHours(fields) {
   const storedHours = numberOrNull(fields["Hours Worked"]);
   if (storedHours !== null) return storedHours;
@@ -50,6 +60,20 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
     return api.airtableRequest(`${encodeURIComponent(api.TABLES.BOOKINGS)}/${recordId}`);
   }
 
+  async function recordsByIds(table, ids) {
+    const unique = [...new Set(ids)].filter(Boolean);
+    const results = [];
+    for (let index = 0; index < unique.length; index += 35) {
+      const chunk = unique.slice(index, index + 35);
+      const records = await api.listRecords(table, {
+        filterByFormula: buildIdFormula(chunk),
+        maxRecords: "1000"
+      });
+      results.push(...records);
+    }
+    return results;
+  }
+
   async function listPayroll() {
     const bookings = await api.listRecords(api.TABLES.BOOKINGS, {
       filterByFormula: "AND({Ready for Payroll},NOT({Paid}))",
@@ -58,8 +82,26 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
       maxRecords: "1000"
     });
 
+    const events = await recordsByIds(
+      api.TABLES.EVENTS,
+      bookings.flatMap((booking) => linkedIds(booking.fields?.Event))
+    );
+    const brands = await recordsByIds(
+      api.TABLES.BRANDS,
+      events.flatMap((event) => linkedIds(event.fields?.Brand))
+    );
+    const stores = await recordsByIds(
+      api.TABLES.STORES,
+      events.flatMap((event) => linkedIds(event.fields?.Store))
+    );
+
+    const eventById = Object.fromEntries(events.map((record) => [record.id, record.fields || {}]));
+    const brandById = Object.fromEntries(brands.map((record) => [record.id, record.fields?.["Brand Name"] || ""]));
+    const storeById = Object.fromEntries(stores.map((record) => [record.id, record.fields?.["Store Name"] || ""]));
+
     return bookings.map((booking) => {
       const fields = booking.fields || {};
+      const eventFields = eventById[linkedIds(fields.Event)[0]] || {};
       const hours = scheduledHours(fields);
       const payRate = numberOrNull(fields["Pay Rate Snapshot"]);
 
@@ -68,9 +110,9 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
         assignment: fields.Assignment || "Untitled Booking",
         ambassadorName: fields["Ambassador Name Text"] || "Unnamed Ambassador",
         ambassadorEmail: first(fields["Ambassadors Email"]),
-        brand: text(fields.Brand),
-        store: text(fields.Store),
-        eventDate: fields["Event Day"] || fields["Event Date (formatted)"] || null,
+        brand: linkedIds(eventFields.Brand).map((id) => brandById[id]).filter(Boolean).join(", ") || text(fields.Brand),
+        store: linkedIds(eventFields.Store).map((id) => storeById[id]).filter(Boolean).join(", ") || text(fields.Store),
+        eventDate: eventFields["Event Date"] || fields["Event Day"] || fields["Event Date (formatted)"] || null,
         approvedAt: fields["Recap Approved Timestamp"] || null,
         payroll: {
           payRate,
