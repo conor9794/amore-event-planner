@@ -289,7 +289,7 @@ async function loadTodaysEvents() {
 }
 
 document.getElementById("todayTab")?.addEventListener("click", switchToToday);
-["addEventTab", "assignTab", "confirmTab", "recapTab"].forEach((id) => {
+["addEventTab", "assignTab", "confirmTab", "recapTab", "payrollTab"].forEach((id) => {
   document.getElementById(id)?.addEventListener("click", leaveToday, true);
 });
 document.getElementById("todaySearch")?.addEventListener("input", renderTodaysEvents);
