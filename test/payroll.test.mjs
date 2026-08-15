@@ -12,21 +12,31 @@ function request(method, body) {
 
 test("lists only scheduled payroll values", async () => {
   const handler = createHandler({
-    TABLES: { BOOKINGS: "Bookings" },
+    TABLES: { BOOKINGS: "Bookings", EVENTS: "Events", BRANDS: "Brands", STORES: "Stores" },
     airtableRequest: async () => ({}),
     updateRecord: async () => ({}),
-    listRecords: async () => [{
-      id: "recOmXjNjckR9XGeg",
-      fields: {
-        Assignment: "PRELAUNCH E2E TEST",
-        "Ambassador Name Text": "Brand Ambassador",
-        "Pay Rate Snapshot": 30,
-        "Hours Worked": 4,
-        "Total Pay": 120,
-        "Actual Hours Worked": 0.033333,
-        "Actual Total Pay": 1
-      }
-    }]
+    listRecords: async (table) => {
+      if (table === "Bookings") return [{
+        id: "recOmXjNjckR9XGeg",
+        fields: {
+          Assignment: "PRELAUNCH E2E TEST",
+          Event: ["recEvent123456789"],
+          "Ambassador Name Text": "Brand Ambassador",
+          "Pay Rate Snapshot": 30,
+          "Hours Worked": 4,
+          "Total Pay": 120,
+          "Actual Hours Worked": 0.033333,
+          "Actual Total Pay": 1
+        }
+      }];
+      if (table === "Events") return [{
+        id: "recEvent123456789",
+        fields: { Brand: ["recBrand123456789"], Store: ["recStore123456789"], "Event Date": "2026-08-15" }
+      }];
+      if (table === "Brands") return [{ id: "recBrand123456789", fields: { "Brand Name": "Test brand" } }];
+      if (table === "Stores") return [{ id: "recStore123456789", fields: { "Store Name": "Total Wine Spirits & More" } }];
+      return [];
+    }
   });
 
   const response = await handler(request("GET"));
@@ -35,12 +45,14 @@ test("lists only scheduled payroll values", async () => {
   assert.equal(response.status, 200);
   assert.equal(body.payroll[0].payroll.scheduledHours, 4);
   assert.equal(body.payroll[0].payroll.totalPay, 120);
+  assert.equal(body.payroll[0].brand, "Test brand");
+  assert.equal(body.payroll[0].store, "Total Wine Spirits & More");
 });
 
 test("marks a ready booking paid and writes the timestamp", async () => {
   let updated;
   const handler = createHandler({
-    TABLES: { BOOKINGS: "Bookings" },
+    TABLES: { BOOKINGS: "Bookings", EVENTS: "Events", BRANDS: "Brands", STORES: "Stores" },
     listRecords: async () => [],
     airtableRequest: async () => ({
       fields: {
@@ -70,7 +82,7 @@ test("marks a ready booking paid and writes the timestamp", async () => {
 test("rejects a booking that is not ready for payroll", async () => {
   let updateCalled = false;
   const handler = createHandler({
-    TABLES: { BOOKINGS: "Bookings" },
+    TABLES: { BOOKINGS: "Bookings", EVENTS: "Events", BRANDS: "Brands", STORES: "Stores" },
     listRecords: async () => [],
     airtableRequest: async () => ({ fields: { "Ready for Payroll": false } }),
     updateRecord: async () => {
