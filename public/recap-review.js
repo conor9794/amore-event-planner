@@ -281,7 +281,7 @@ async function approveRecap(bookingId) {
 }
 
 document.getElementById("recapTab")?.addEventListener("click", switchToRecaps);
-["addEventTab", "assignTab", "confirmTab"].forEach((id) => {
+["addEventTab", "assignTab", "confirmTab", "todayTab", "payrollTab"].forEach((id) => {
   document.getElementById(id)?.addEventListener("click", leaveRecaps, true);
 });
 document.getElementById("recapSearch")?.addEventListener("input", renderRecaps);
