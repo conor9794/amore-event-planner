@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Amore Event Planner</title>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/desktop.css" />
   <link rel="stylesheet" href="/recap-review.css" />
   <link rel="stylesheet" href="/todays-events.css" />
   <link rel="stylesheet" href="/payroll.css" />
@@ -13,7 +14,8 @@
   <main class="app">
     <header>
       <div class="topBar">
-        <div>
+        <button type="button" id="layoutModeToggle" class="layoutModeToggle" aria-label="Switch to desktop layout" aria-pressed="false">Desktop</button>
+        <div class="brandTitle">
           <div class="eyebrow">Amore</div>
           <h1>Event Planner</h1>
         </div>
@@ -273,6 +275,7 @@
   <div id="recapToast" class="recapToast hidden" role="status"></div>
   <div id="payrollToast" class="recapToast hidden" role="status"></div>
 
+  <script src="/desktop.js"></script>
   <script src="/app.js"></script>
   <script src="/recap-review.js"></script>
   <script src="/recap-payroll-scheduled.js"></script>
