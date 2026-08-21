@@ -1,0 +1,184 @@
+/* Desktop workspace V1. Mobile remains the default and existing mobile styles are untouched. */
+.layoutModeToggle {
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-size: 13px;
+  line-height: 1;
+  min-width: 78px;
+}
+
+.topBar .brandTitle {
+  flex: 1;
+}
+
+body.desktop-mode .app {
+  max-width: 1320px;
+  padding: 28px 28px 56px;
+}
+
+body.desktop-mode header {
+  padding: 10px 2px 22px;
+}
+
+body.desktop-mode .topBar {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 110px;
+  align-items: start;
+  gap: 20px;
+}
+
+body.desktop-mode .topBar .brandTitle {
+  text-align: center;
+}
+
+body.desktop-mode .topBar .layoutModeToggle {
+  justify-self: start;
+}
+
+body.desktop-mode .topBar .themeToggle {
+  justify-self: end;
+}
+
+body.desktop-mode h1 {
+  font-size: 46px;
+}
+
+body.desktop-mode header > p {
+  max-width: 780px;
+  margin: 8px auto 0;
+  text-align: center;
+}
+
+body.desktop-mode .tabs {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+body.desktop-mode .tab {
+  min-height: 52px;
+  padding: 12px 10px;
+}
+
+body.desktop-mode .card {
+  border-radius: 20px;
+  padding: 24px;
+}
+
+body.desktop-mode #addEventPage .card {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+body.desktop-mode #eventForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  align-items: start;
+}
+
+body.desktop-mode #eventForm > label:nth-of-type(1),
+body.desktop-mode #eventForm > label:nth-of-type(2),
+body.desktop-mode #eventForm > #selectedStore,
+body.desktop-mode #eventForm > label:nth-of-type(4),
+body.desktop-mode #eventForm > label:nth-of-type(5),
+body.desktop-mode #eventForm > #message,
+body.desktop-mode #eventForm > .actions {
+  grid-column: 1 / -1;
+}
+
+body.desktop-mode #eventForm > .grid2 {
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+body.desktop-mode #eventForm > label:nth-of-type(4) textarea {
+  min-height: 120px;
+}
+
+body.desktop-mode #eventForm > .actions {
+  grid-template-columns: 1fr 1fr;
+  max-width: 600px;
+  width: 100%;
+  justify-self: end;
+}
+
+body.desktop-mode #assignPage .card,
+body.desktop-mode #confirmPage .card {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+body.desktop-mode .searchResults {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 360px;
+}
+
+body.desktop-mode #todayPage .card,
+body.desktop-mode #recapPage .card,
+body.desktop-mode #payrollPage .card {
+  width: 100%;
+}
+
+body.desktop-mode .todayToolbar,
+body.desktop-mode .recapToolbar,
+body.desktop-mode .payrollToolbar {
+  gap: 18px;
+}
+
+body.desktop-mode .todayList,
+body.desktop-mode .recapList,
+body.desktop-mode .payrollList {
+  width: 100%;
+}
+
+body.desktop-mode .todayList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 860px) {
+  body.desktop-mode .app {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  body.desktop-mode .tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.desktop-mode #eventForm {
+    grid-template-columns: 1fr;
+  }
+
+  body.desktop-mode #eventForm > * {
+    grid-column: 1 !important;
+  }
+
+  body.desktop-mode .todayList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .topBar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+  }
+
+  .topBar .brandTitle {
+    text-align: left;
+  }
+
+  .layoutModeToggle,
+  .themeToggle {
+    padding: 9px 10px;
+    min-width: 0;
+  }
+}
