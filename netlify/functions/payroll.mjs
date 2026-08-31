@@ -55,6 +55,36 @@ export function scheduledTotalPay(fields, hours, payRate) {
   return Math.round(hours * payRate * 100) / 100;
 }
 
+function payrollAmounts(fields) {
+  const payRate = numberOrNull(fields["Pay Rate Snapshot"]);
+  const scheduled = scheduledHours(fields);
+  const actualHours = numberOrNull(fields["Actual Hours Worked"]);
+  const hours = actualHours !== null ? actualHours : scheduled;
+  const actualEventPay = numberOrNull(fields["Actual Total Pay"]);
+  const eventPay = actualEventPay !== null ? actualEventPay : scheduledTotalPay(fields, hours, payRate);
+  const expenseAmount = numberOrNull(fields["Expense Amount"]) || 0;
+  const expensePaymentMethod = text(fields["Expense Payment Method"]);
+  const storedReimbursement = numberOrNull(fields["Reimbursement Due"]);
+  const reimbursementDue = storedReimbursement !== null
+    ? storedReimbursement
+    : (expensePaymentMethod.includes("Personal Card") ? expenseAmount : 0);
+  const storedTotalPayroll = numberOrNull(fields["Total Payroll Due"]);
+  const totalPayrollDue = storedTotalPayroll !== null
+    ? storedTotalPayroll
+    : (eventPay === null ? null : Math.round((eventPay + reimbursementDue) * 100) / 100);
+
+  return {
+    payRate,
+    hours,
+    scheduledHours: scheduled,
+    eventPay,
+    expenseAmount,
+    expensePaymentMethod,
+    reimbursementDue,
+    totalPayrollDue
+  };
+}
+
 export function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecord }) {
   async function getRecord(recordId) {
     return api.airtableRequest(`${encodeURIComponent(api.TABLES.BOOKINGS)}/${recordId}`);
@@ -102,8 +132,7 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
     return bookings.map((booking) => {
       const fields = booking.fields || {};
       const eventFields = eventById[linkedIds(fields.Event)[0]] || {};
-      const hours = scheduledHours(fields);
-      const payRate = numberOrNull(fields["Pay Rate Snapshot"]);
+      const amounts = payrollAmounts(fields);
 
       return {
         bookingId: booking.id,
@@ -114,12 +143,7 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
         store: linkedIds(eventFields.Store).map((id) => storeById[id]).filter(Boolean).join(", ") || text(fields.Store),
         eventDate: eventFields["Event Date"] || fields["Event Day"] || fields["Event Date (formatted)"] || null,
         approvedAt: fields["Recap Approved Timestamp"] || null,
-        payroll: {
-          payRate,
-          scheduledHours: hours,
-          totalPay: scheduledTotalPay(fields, hours, payRate),
-          expenseAmount: numberOrNull(fields["Expense Amount"]) || 0
-        }
+        payroll: amounts
       };
     });
   }
@@ -142,10 +166,8 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
     if (!fields["Ready for Payroll"]) return json(409, { error: "This booking is not ready for payroll." });
     if (fields.Paid) return json(409, { error: "This booking has already been paid." });
 
-    const hours = scheduledHours(fields);
-    const payRate = numberOrNull(fields["Pay Rate Snapshot"]);
-    const totalPay = scheduledTotalPay(fields, hours, payRate);
-    if (totalPay === null) return json(409, { error: "Scheduled payroll is incomplete for this booking." });
+    const amounts = payrollAmounts(fields);
+    if (amounts.totalPayrollDue === null) return json(409, { error: "Payroll is incomplete for this booking." });
 
     const paidTimestamp = new Date().toISOString();
     await api.updateRecord(api.TABLES.BOOKINGS, bookingId, {
@@ -153,7 +175,14 @@ export function createHandler(api = { TABLES, airtableRequest, listRecords, upda
       "Paid Timestamp": paidTimestamp
     });
 
-    return json(200, { success: true, bookingId, paidTimestamp, totalPay });
+    return json(200, {
+      success: true,
+      bookingId,
+      paidTimestamp,
+      totalPay: amounts.totalPayrollDue,
+      eventPay: amounts.eventPay,
+      reimbursementDue: amounts.reimbursementDue
+    });
   }
 
   return async function handler(request) {
