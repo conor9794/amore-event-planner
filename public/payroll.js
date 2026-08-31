@@ -86,24 +86,29 @@ function payrollSearchText(booking) {
     booking.ambassadorName,
     booking.ambassadorEmail,
     booking.brand,
-    booking.store
+    booking.store,
+    booking.payroll?.expensePaymentMethod
   ].filter(Boolean).join(" ").toLowerCase();
 }
 
 function renderPayrollSummary(items) {
   const summary = document.getElementById("payrollSummary");
   if (!summary) return;
-  const total = items.reduce((sum, booking) => sum + (Number(booking.payroll?.totalPay) || 0), 0);
+  const total = items.reduce((sum, booking) => sum + (Number(booking.payroll?.totalPayrollDue) || 0), 0);
   summary.innerHTML = `
     <div><strong>${payrollEscape(items.length)}</strong><span>Ready to Pay</span></div>
-    <div><strong>${payrollEscape(payrollMoney(total))}</strong><span>Scheduled Payroll</span></div>
+    <div><strong>${payrollEscape(payrollMoney(total))}</strong><span>Total Payroll Due</span></div>
   `;
 }
 
 function renderPayrollCard(booking) {
   const expanded = expandedPayrollId === booking.bookingId;
   const paying = payingBookingId === booking.bookingId;
-  const totalPay = booking.payroll?.totalPay;
+  const totalDue = booking.payroll?.totalPayrollDue;
+  const reimbursement = Number(booking.payroll?.reimbursementDue) || 0;
+  const expenseAmount = Number(booking.payroll?.expenseAmount) || 0;
+  const paymentMethod = booking.payroll?.expensePaymentMethod || (expenseAmount > 0 ? "Unspecified" : "No Expense");
+
   return `
     <article class="payrollCard ${expanded ? "expanded" : ""}">
       <button type="button" class="payrollCardSummary" data-payroll-toggle="${payrollEscape(booking.bookingId)}" aria-expanded="${expanded}">
@@ -113,8 +118,8 @@ function renderPayrollCard(booking) {
           <span>${payrollEscape([booking.brand, booking.store].filter(Boolean).join(" • "))}</span>
         </div>
         <div class="payrollCardAmount">
-          <strong>${payrollEscape(payrollMoney(totalPay))}</strong>
-          <span>${payrollEscape(payrollNumber(booking.payroll?.scheduledHours))} hrs</span>
+          <strong>${payrollEscape(payrollMoney(totalDue))}</strong>
+          <span>${payrollEscape(payrollNumber(booking.payroll?.hours))} hrs</span>
         </div>
       </button>
       ${expanded ? `
@@ -124,12 +129,16 @@ function renderPayrollCard(booking) {
           ${payrollDetailRow("Email", booking.ambassadorEmail)}
           ${payrollDetailRow("Approved", payrollDateTime(booking.approvedAt))}
           ${payrollDetailRow("Pay Rate", payrollMoney(booking.payroll?.payRate))}
-          ${payrollDetailRow("Scheduled Hours", payrollNumber(booking.payroll?.scheduledHours))}
-          ${payrollDetailRow("Scheduled Pay", payrollMoney(totalPay))}
-          ${Number(booking.payroll?.expenseAmount) > 0 ? payrollDetailRow("Expense", payrollMoney(booking.payroll.expenseAmount)) : ""}
-          <div class="payrollWarning">Confirm payment was sent before marking this booking paid.</div>
+          ${payrollDetailRow("Actual Hours", payrollNumber(booking.payroll?.hours))}
+          ${payrollDetailRow("Event Pay", payrollMoney(booking.payroll?.eventPay))}
+          ${payrollDetailRow("Expense Payment Method", paymentMethod)}
+          ${expenseAmount > 0 ? payrollDetailRow("Expense Amount", payrollMoney(expenseAmount)) : ""}
+          ${payrollDetailRow("Reimbursement Due", payrollMoney(reimbursement))}
+          ${payrollDetailRow("Total Payroll Due", payrollMoney(totalDue))}
+          ${paymentMethod === "Unspecified" && expenseAmount > 0 ? `<div class="payrollWarning">Expense payment method is missing. Confirm whether this was paid personally or on the company card before paying.</div>` : ""}
+          <div class="payrollWarning">Confirm the total payroll amount was sent before marking this booking paid.</div>
           <button type="button" class="primary payrollMarkPaid" data-payroll-paid="${payrollEscape(booking.bookingId)}" ${paying ? "disabled" : ""}>
-            ${paying ? "Marking Paid..." : `Mark Paid — ${payrollEscape(payrollMoney(totalPay))}`}
+            ${paying ? "Marking Paid..." : `Mark Paid — ${payrollEscape(payrollMoney(totalDue))}`}
           </button>
         </div>` : ""}
     </article>`;
@@ -187,7 +196,7 @@ async function markPayrollPaid(bookingId) {
   if (!booking) return;
 
   const confirmed = window.confirm(
-    `Confirm ${payrollMoney(booking.payroll?.totalPay)} was paid to ${booking.ambassadorName || "this ambassador"}?`
+    `Confirm ${payrollMoney(booking.payroll?.totalPayrollDue)} was paid to ${booking.ambassadorName || "this ambassador"}?`
   );
   if (!confirmed) return;
 
