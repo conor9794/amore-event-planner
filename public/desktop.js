@@ -25,4 +25,12 @@
   button.addEventListener("click", function () {
     applyMode(document.body.classList.contains("desktop-mode") ? "mobile" : "desktop");
   });
+
+  window.addEventListener("load", function () {
+    if (document.querySelector('script[data-staff-management]')) return;
+    const script = document.createElement("script");
+    script.src = "/staff-management.js";
+    script.dataset.staffManagement = "true";
+    document.body.appendChild(script);
+  });
 })();
