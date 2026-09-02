@@ -42,6 +42,7 @@ test("schedule edit updates the event and active booking snapshots while preserv
       assert.equal(table, "Bookings");
       return [
         { id: "recACTIVEABCDEFG", fields: { Event: ["recABCDEFGHIJKLMN"] } },
+        { id: "recCONFIRMEDABCDE", fields: { Event: ["recABCDEFGHIJKLMN"], "Booking Confirmed": true, "Pay Rate Snapshot": 30 } },
         { id: "recLOCKEDABCDEFG", fields: { Event: ["recABCDEFGHIJKLMN"], "Recap Submitted Timestamp": "2026-09-13T02:00:00Z" } }
       ];
     },
@@ -58,8 +59,9 @@ test("schedule edit updates the event and active booking snapshots while preserv
   const body = JSON.parse(response.body);
 
   assert.equal(response.statusCode, 200);
-  assert.equal(body.bookingsUpdated, 1);
+  assert.equal(body.bookingsUpdated, 2);
   assert.equal(body.bookingsPreserved, 1);
+  assert.equal(body.bookingsReconfirmationRequired, 1);
   assert.equal(body.startTime, "2026-09-12T22:00:00.000Z");
   assert.equal(body.endTime, "2026-09-13T05:00:00.000Z");
   assert.deepEqual(updates, [
@@ -79,6 +81,27 @@ test("schedule edit updates the event and active booking snapshots while preserv
         "Scheduled Start Snapshot": "2026-09-12T22:00:00.000Z",
         "Scheduled End Snapshot": "2026-09-13T05:00:00.000Z"
       }
+    },
+    {
+      table: "Bookings",
+      id: "recCONFIRMEDABCDE",
+      fields: {
+        "Scheduled Start Snapshot": "2026-09-12T22:00:00.000Z",
+        "Scheduled End Snapshot": "2026-09-13T05:00:00.000Z",
+        "Booking Confirmed": false,
+        "Booking Confirmed Email Sent": false,
+        "Pay Rate Snapshot": null
+      }
     }
   ]);
+});
+
+test("schedule edit rejects equal start and end times", async () => {
+  const handler = createHandler({ TABLES });
+  const response = await handler({
+    httpMethod: "PATCH",
+    body: JSON.stringify({ eventId: "recABCDEFGHIJKLMN", eventDate: "2026-09-12", startTime: "18:00", endTime: "18:00" })
+  });
+  assert.equal(response.statusCode, 400);
+  assert.match(JSON.parse(response.body).error, /cannot be the same/);
 });

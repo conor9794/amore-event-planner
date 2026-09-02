@@ -600,14 +600,16 @@ async function saveEventSchedule() {
       selected.endTime = data.endTime;
       selected.localStartTime = startTime;
       selected.localEndTime = endTime;
+      $("eventSearch").value = eventDisplayName(selected);
     }
     renderEventOptions();
     renderSelectedEvent();
     await handleEventChange();
 
     const updatedText = data.bookingsUpdated === 1 ? "1 active booking was updated" : `${data.bookingsUpdated || 0} active bookings were updated`;
+    const reconfirmText = data.bookingsReconfirmationRequired ? ` ${data.bookingsReconfirmationRequired} previously confirmed booking${data.bookingsReconfirmationRequired === 1 ? " now needs" : "s now need"} to be reconfirmed from Confirm Booking so the updated schedule is sent.` : "";
     const preservedText = data.bookingsPreserved ? ` ${data.bookingsPreserved} completed booking record${data.bookingsPreserved === 1 ? " was" : "s were"} preserved.` : "";
-    showAssignMessage(`Event date and times saved. ${updatedText}.${preservedText}`, "ok");
+    showAssignMessage(`Event date and times saved. ${updatedText}.${reconfirmText}${preservedText}`, "ok");
   } catch (err) {
     showAssignMessage(err.message, "error");
   } finally {

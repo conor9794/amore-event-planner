@@ -147,6 +147,7 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(eventDate || "")) || !/^\d{2}:\d{2}$/.test(String(startTime || "")) || !/^\d{2}:\d{2}$/.test(String(endTime || ""))) {
       return json(400, { error: "Enter the event date, start time, and end time." });
     }
+    if (startTime === endTime) return json(400, { error: "Start time and end time cannot be the same." });
 
     const eventRecord = await api.airtableRequest(`${encodeURIComponent(api.TABLES.EVENTS)}/${eventId}`);
     const storeId = linkedIds(eventRecord.fields?.Store)[0];
@@ -162,12 +163,29 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
     const linkedBookings = bookings.filter((record) => linkedIds(record.fields?.Event).includes(eventId));
     const activeBookings = linkedBookings.filter((record) => !bookingHasHistory(record.fields || {}));
     const preservedBookings = linkedBookings.length - activeBookings.length;
-    await Promise.all(activeBookings.map((record) => api.updateRecord(api.TABLES.BOOKINGS, record.id, {
-      "Scheduled Start Snapshot": scheduledStart,
-      "Scheduled End Snapshot": scheduledEnd
-    })));
+    const reconfirmationBookings = activeBookings.filter((record) => Boolean(record.fields?.["Booking Confirmed"]));
+    await Promise.all(activeBookings.map((record) => {
+      const fields = {
+        "Scheduled Start Snapshot": scheduledStart,
+        "Scheduled End Snapshot": scheduledEnd
+      };
+      if (record.fields?.["Booking Confirmed"]) {
+        fields["Booking Confirmed"] = false;
+        fields["Booking Confirmed Email Sent"] = false;
+        fields["Pay Rate Snapshot"] = null;
+      }
+      return api.updateRecord(api.TABLES.BOOKINGS, record.id, fields);
+    }));
 
-    return json(200, { eventId, eventDate, startTime: scheduledStart, endTime: scheduledEnd, bookingsUpdated: activeBookings.length, bookingsPreserved: preservedBookings });
+    return json(200, {
+      eventId,
+      eventDate,
+      startTime: scheduledStart,
+      endTime: scheduledEnd,
+      bookingsUpdated: activeBookings.length,
+      bookingsPreserved: preservedBookings,
+      bookingsReconfirmationRequired: reconfirmationBookings.length
+    });
   }
 
   return async function handler(event) {
