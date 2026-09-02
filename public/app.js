@@ -539,8 +539,28 @@ async function handleEventChange() {
     ${event.endTime ? `End: ${escapeHtml(formatDateTime(event.endTime))}<br>` : ""}
     ${event.hourlyRate ? `Hourly Rate: ${escapeHtml(event.hourlyRate)}<br>` : ""}
     ${event.address ? `Address: ${escapeHtml(event.address)}` : ""}
+    <div class="scheduleEditor">
+      <div class="boxTitle">Edit Event Schedule</div>
+      <div class="grid2 scheduleFields">
+        <label>
+          Event Date
+          <input id="manageEventDate" type="date" value="${escapeHtml(event.eventDate || "")}" />
+        </label>
+        <label>
+          Start Time
+          <input id="manageStartTime" type="time" value="${escapeHtml(event.localStartTime || "")}" />
+        </label>
+        <label>
+          End Time
+          <input id="manageEndTime" type="time" value="${escapeHtml(event.localEndTime || "")}" />
+        </label>
+      </div>
+      <p class="boxHint">If the end time is earlier than the start time, the event ends the next day.</p>
+      <button type="button" id="saveEventScheduleBtn" class="secondary">Save Date & Times</button>
+    </div>
   `;
   $("eventDetails").className = "detailBox";
+  $("saveEventScheduleBtn")?.addEventListener("click", saveEventSchedule);
 
   selectedAmbassadorId = "";
   $("ambassadorSearch").value = "";
@@ -550,6 +570,50 @@ async function handleEventChange() {
     loadBookingsForEvent(eventId),
     loadInterestsForEvent(eventId)
   ]);
+}
+
+async function saveEventSchedule() {
+  const eventId = selectedEventId || $("assignEvent").value;
+  const eventDate = $("manageEventDate")?.value || "";
+  const startTime = $("manageStartTime")?.value || "";
+  const endTime = $("manageEndTime")?.value || "";
+  if (!eventId) return showAssignMessage("Select an event.", "error");
+  if (!eventDate || !startTime || !endTime) return showAssignMessage("Enter the event date, start time, and end time.", "error");
+
+  const button = $("saveEventScheduleBtn");
+  button.disabled = true;
+  showAssignMessage("Saving the event date and times...", "ok");
+
+  try {
+    const res = await fetch("/api/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId, eventDate, startTime, endTime })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not update the event schedule.");
+
+    const selected = plannerEvents.find((item) => item.id === eventId);
+    if (selected) {
+      selected.eventDate = eventDate;
+      selected.startTime = data.startTime;
+      selected.endTime = data.endTime;
+      selected.localStartTime = startTime;
+      selected.localEndTime = endTime;
+    }
+    renderEventOptions();
+    renderSelectedEvent();
+    await handleEventChange();
+
+    const updatedText = data.bookingsUpdated === 1 ? "1 active booking was updated" : `${data.bookingsUpdated || 0} active bookings were updated`;
+    const preservedText = data.bookingsPreserved ? ` ${data.bookingsPreserved} completed booking record${data.bookingsPreserved === 1 ? " was" : "s were"} preserved.` : "";
+    showAssignMessage(`Event date and times saved. ${updatedText}.${preservedText}`, "ok");
+  } catch (err) {
+    showAssignMessage(err.message, "error");
+  } finally {
+    const currentButton = $("saveEventScheduleBtn");
+    if (currentButton) currentButton.disabled = false;
+  }
 }
 
 async function loadBookingsForEvent(eventId) {

@@ -58,10 +58,12 @@
         <strong>${escapeHtml(booking.ambassadorName || booking.assignment || "Booked Ambassador")}</strong>
         ${booking.ambassadorEmail ? `<br>${escapeHtml(booking.ambassadorEmail)}` : ""}
         ${booking.bookingConfirmed ? `<br><em>Confirmed</em>` : `<br><em>Save the Date / Not Confirmed</em>`}
-        <div class="staffActions">
-          <button type="button" class="miniButton staffChangeBtn" data-booking-id="${escapeHtml(booking.id)}">Change Staff</button>
-          <button type="button" class="miniButton staffRemoveBtn" data-booking-id="${escapeHtml(booking.id)}">Remove Staff</button>
-        </div>
+        ${booking.historyLocked ? `<div class="staffEditNotice"><em>Attendance, recap, or payroll history is locked.</em></div>` : `
+          <div class="staffActions">
+            <button type="button" class="miniButton staffChangeBtn" data-booking-id="${escapeHtml(booking.id)}">Change Staff</button>
+            <button type="button" class="miniButton staffRemoveBtn" data-booking-id="${escapeHtml(booking.id)}">Remove Staff</button>
+          </div>
+        `}
       </div>
     `).join("");
     box.className = "detailBox";
