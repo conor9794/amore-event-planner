@@ -105,3 +105,14 @@ test("schedule edit rejects equal start and end times", async () => {
   assert.equal(response.statusCode, 400);
   assert.match(JSON.parse(response.body).error, /cannot be the same/);
 });
+
+test("event list responses explicitly bypass browser and CDN caches", async () => {
+  const handler = createHandler({
+    TABLES,
+    listRecords: async () => []
+  });
+  const response = await handler({ httpMethod: "GET" });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers["Cache-Control"], "no-store, max-age=0, must-revalidate");
+  assert.equal(response.headers["Netlify-CDN-Cache-Control"], "no-store");
+});

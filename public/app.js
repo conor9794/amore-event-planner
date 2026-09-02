@@ -8,6 +8,7 @@ let unconfirmedBookings = [];
 let selectedAmbassadorId = "";
 let selectedEventId = "";
 let selectedConfirmBookingId = "";
+let plannerEventRefreshPromise = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -131,8 +132,9 @@ function switchPage(pageName) {
   $("assignTab").classList.toggle("active", isAssign);
   $("confirmTab").classList.toggle("active", isConfirm);
 
-  if (isAssign && plannerEvents.length === 0) {
-    loadAssignData();
+  if (isAssign) {
+    if (plannerEvents.length === 0) loadAssignData();
+    else refreshPlannerEvents();
   }
 
   if (isConfirm && unconfirmedBookings.length === 0) {
@@ -287,8 +289,8 @@ async function loadAssignData() {
 
   try {
     const [eventsRes, ambassadorsRes] = await Promise.all([
-      fetch("/api/events"),
-      fetch("/api/ambassadors")
+      fetch(`/api/events?refresh=${Date.now()}`, { cache: "no-store" }),
+      fetch("/api/ambassadors", { cache: "no-store" })
     ]);
     const eventsData = await eventsRes.json();
     const ambassadorsData = await ambassadorsRes.json();
@@ -307,6 +309,48 @@ async function loadAssignData() {
   } finally {
     setCreateBookingButton(false);
   }
+}
+
+function managementPageIsActive() {
+  return $("assignPage")?.classList.contains("active");
+}
+
+function managementEditIsDirty() {
+  return Boolean(document.querySelector('.scheduleEditor[data-dirty="true"]') || $("cancelStaffChangeBtn"));
+}
+
+async function refreshPlannerEvents({ quiet = true } = {}) {
+  if (!managementPageIsActive() || managementEditIsDirty()) return;
+  if (plannerEventRefreshPromise) return plannerEventRefreshPromise;
+
+  plannerEventRefreshPromise = (async () => {
+    try {
+      const res = await fetch(`/api/events?refresh=${Date.now()}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not refresh events.");
+
+      plannerEvents = data.events || [];
+      renderEventOptions();
+
+      const selected = plannerEvents.find((item) => item.id === selectedEventId);
+      if (selected) {
+        $("eventSearch").value = eventDisplayName(selected);
+        await handleEventChange();
+      } else if (selectedEventId) {
+        selectedEventId = "";
+        $("assignEvent").value = "";
+        $("eventSearch").value = "";
+        renderSelectedEvent();
+        resetEventDependentBoxes();
+      }
+    } catch (err) {
+      if (!quiet) showAssignMessage(err.message, "error");
+    } finally {
+      plannerEventRefreshPromise = null;
+    }
+  })();
+
+  return plannerEventRefreshPromise;
 }
 
 function renderEventOptions() {
@@ -561,6 +605,11 @@ async function handleEventChange() {
   `;
   $("eventDetails").className = "detailBox";
   $("saveEventScheduleBtn")?.addEventListener("click", saveEventSchedule);
+  ["manageEventDate", "manageStartTime", "manageEndTime"].forEach((id) => {
+    $(id)?.addEventListener("input", () => {
+      document.querySelector(".scheduleEditor")?.setAttribute("data-dirty", "true");
+    });
+  });
 
   selectedAmbassadorId = "";
   $("ambassadorSearch").value = "";
@@ -1039,3 +1088,9 @@ $("confirmBookingBtn").addEventListener("click", confirmBooking);
 initTheme();
 loadBrands();
 loadConfigAndGoogle();
+
+window.addEventListener("focus", () => refreshPlannerEvents());
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshPlannerEvents();
+});
+window.setInterval(() => refreshPlannerEvents(), 30000);

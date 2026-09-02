@@ -89,8 +89,12 @@ function bookingHasHistory(fields) {
   return Boolean(fields["Clock In Timestamp"] || fields["Clock Out Timestamp"] || fields["Recap Submitted Timestamp"] || fields["Recap Approved"] || fields["Ready for Payroll"] || fields.Paid);
 }
 
-function json(statusCode, body) {
-  return { statusCode, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+function json(statusCode, body, extraHeaders = {}) {
+  return {
+    statusCode,
+    headers: { "Content-Type": "application/json", ...extraHeaders },
+    body: JSON.stringify(body)
+  };
 }
 
 function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecord }) {
@@ -190,7 +194,12 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
 
   return async function handler(event) {
     try {
-      if (event.httpMethod === "GET") return json(200, { events: await listEvents() });
+      if (event.httpMethod === "GET") {
+        return json(200, { events: await listEvents() }, {
+          "Cache-Control": "no-store, max-age=0, must-revalidate",
+          "Netlify-CDN-Cache-Control": "no-store"
+        });
+      }
       if (event.httpMethod === "PATCH") return updateEventSchedule(JSON.parse(event.body || "{}"));
       return json(405, { error: "Method not allowed." });
     } catch (err) {
