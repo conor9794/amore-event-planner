@@ -16,6 +16,25 @@ async function getBooking(bookingId) {
   return airtableRequest(`${encodeURIComponent(TABLES.BOOKINGS)}/${bookingId}`);
 }
 
+function bookingHasHistory(fields) {
+  return Boolean(
+    fields["Clock In Timestamp"] ||
+    fields["Clock Out Timestamp"] ||
+    fields["Recap Submitted Timestamp"] ||
+    fields["Recap Approved"] ||
+    fields["Ready for Payroll"] ||
+    fields.Paid
+  );
+}
+
+function assertBookingCanChange(record) {
+  if (bookingHasHistory(record.fields || {})) {
+    const err = new Error("This booking already has attendance, recap, or payroll history and cannot be changed from the planner.");
+    err.statusCode = 409;
+    throw err;
+  }
+}
+
 async function ensureNoDuplicate(eventIds, ambassadorId, bookingId) {
   if (!eventIds.length) return;
   const records = await listRecords(TABLES.BOOKINGS, { maxRecords: "1000" });
@@ -45,6 +64,7 @@ exports.handler = async (event) => {
       if (!ambassadorId) return json(400, { error: "Select a replacement ambassador." });
 
       const current = await getBooking(bookingId);
+      assertBookingCanChange(current);
       const eventIds = linkedIds((current.fields || {})["Event"]);
       await ensureNoDuplicate(eventIds, ambassadorId, bookingId);
 
@@ -52,6 +72,7 @@ exports.handler = async (event) => {
         "Ambassador": [ambassadorId],
         "Booking Confirmed": false,
         "Booking Confirmed Email Sent": false,
+        "Pay Rate Snapshot": null,
         "Send Save the Date": false,
         "Save the Date Sent": false
       };
@@ -68,6 +89,8 @@ exports.handler = async (event) => {
     }
 
     if (event.httpMethod === "DELETE") {
+      const current = await getBooking(bookingId);
+      assertBookingCanChange(current);
       await airtableRequest(`${encodeURIComponent(TABLES.BOOKINGS)}/${bookingId}`, {
         method: "DELETE"
       });
@@ -80,3 +103,6 @@ exports.handler = async (event) => {
     return json(err.statusCode || 500, { error: err.message || "Staffing update failed." });
   }
 };
+
+exports.bookingHasHistory = bookingHasHistory;
+exports.assertBookingCanChange = assertBookingCanChange;

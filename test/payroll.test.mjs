@@ -10,7 +10,7 @@ function request(method, body) {
   });
 }
 
-test("lists only scheduled payroll values", async () => {
+test("lists actual payroll values while preserving the scheduled-hours reference", async () => {
   const handler = createHandler({
     TABLES: { BOOKINGS: "Bookings", EVENTS: "Events", BRANDS: "Brands", STORES: "Stores" },
     airtableRequest: async () => ({}),
@@ -44,7 +44,9 @@ test("lists only scheduled payroll values", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(body.payroll[0].payroll.scheduledHours, 4);
-  assert.equal(body.payroll[0].payroll.totalPay, 120);
+  assert.equal(body.payroll[0].payroll.hours, 0.033333);
+  assert.equal(body.payroll[0].payroll.eventPay, 1);
+  assert.equal(body.payroll[0].payroll.totalPayrollDue, 1);
   assert.equal(body.payroll[0].brand, "Test brand");
   assert.equal(body.payroll[0].store, "Total Wine Spirits & More");
 });

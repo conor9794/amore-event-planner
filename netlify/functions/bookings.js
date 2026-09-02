@@ -74,7 +74,15 @@ scheduledEnd:
 
     bookingConfirmed: Boolean(f["Booking Confirmed"]),
     bookingConfirmedEmailSent: Boolean(f["Booking Confirmed Email Sent"]),
-    saveTheDateSent: Boolean(f["Save the Date Sent"])
+    saveTheDateSent: Boolean(f["Save the Date Sent"]),
+    historyLocked: Boolean(
+      f["Clock In Timestamp"] ||
+      f["Clock Out Timestamp"] ||
+      f["Recap Submitted Timestamp"] ||
+      f["Recap Approved"] ||
+      f["Ready for Payroll"] ||
+      f.Paid
+    )
   };
 }
 
