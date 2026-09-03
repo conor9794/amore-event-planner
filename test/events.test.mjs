@@ -172,7 +172,7 @@ test("event views separate upcoming events from the previous 90 days using each 
 
   assert.deepEqual(upcoming.map((event) => event.id), ["todayLocal", "future"]);
   assert.deepEqual(past.map((event) => event.id), ["recent", "olderRecent"]);
-  assert.deepEqual(all.map((event) => event.id), ["olderRecent", "recent", "todayLocal", "future"]);
+  assert.deepEqual(all.map((event) => event.id), ["todayLocal", "future", "recent", "olderRecent"]);
 });
 
 test("event list includes desktop staffing and editing details", async () => {

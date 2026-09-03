@@ -70,6 +70,10 @@ function calendarDaysBetween(earlier, later) {
   return Math.floor((end.getTime() - start.getTime()) / 86400000);
 }
 
+function eventIsPast(event, now) {
+  return String(event.eventDate || "").slice(0, 10) < localDateForState(now, event.state);
+}
+
 function offsetForTimeZone(date, time, timeZone) {
   const probe = new Date(`${date}T${time}:00Z`);
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset", hour: "2-digit", minute: "2-digit" }).formatToParts(probe);
@@ -211,12 +215,21 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
       if (!event.eventDate || !event.startTime || !event.endTime) return false;
       const eventDate = String(event.eventDate).slice(0, 10);
       const today = localDateForState(now, event.state);
-      const isPast = eventDate < today;
+      const isPast = eventIsPast(event, now);
       const isRecentPast = isPast && calendarDaysBetween(eventDate, today) <= days;
       if (view === "past") return isRecentPast;
       if (view === "all") return !isPast || isRecentPast;
       return !isPast;
-    }).sort((a, b) => view === "past" ? dateSortValue(b) - dateSortValue(a) : dateSortValue(a) - dateSortValue(b));
+    }).sort((a, b) => {
+      if (view === "past") return dateSortValue(b) - dateSortValue(a);
+      if (view === "all") {
+        const aPast = eventIsPast(a, now);
+        const bPast = eventIsPast(b, now);
+        if (aPast !== bPast) return aPast ? 1 : -1;
+        return aPast ? dateSortValue(b) - dateSortValue(a) : dateSortValue(a) - dateSortValue(b);
+      }
+      return dateSortValue(a) - dateSortValue(b);
+    });
   }
 
   async function updateEventSchedule(body) {
