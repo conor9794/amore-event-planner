@@ -1,0 +1,474 @@
+.desktopOnly,
+.desktopOnlyTab {
+  display: none;
+}
+
+body.desktop-mode .desktopOnlyTab {
+  display: block;
+}
+
+body.desktop-mode .desktopOnly.page.active {
+  display: block;
+}
+
+.commandHeader,
+.commandPanelHeader,
+.commandDetailTitle,
+.commandQueueItem,
+.commandSwitchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.commandHeader {
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.commandHeader h2 {
+  margin: 4px 0 5px;
+}
+
+.commandPrimaryAction {
+  width: auto;
+  min-width: 132px;
+}
+
+.commandFilters {
+  display: grid;
+  grid-template-columns: 140px 160px 160px minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.commandFilters label {
+  margin: 0;
+  font-size: 13px;
+}
+
+.commandFilters input,
+.commandFilters select {
+  margin-top: 5px;
+  padding: 10px 11px;
+}
+
+.commandRefresh {
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+}
+
+.commandKpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.commandKpi,
+.commandPanel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.commandKpi {
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.commandKpi span,
+.commandKpi small,
+.commandUpdated,
+.commandEventName small,
+.commandEventDetail p,
+.commandFact span,
+.commandQueueItem small,
+.commandStep small {
+  color: var(--muted);
+}
+
+.commandKpi span,
+.commandKpi small {
+  display: block;
+}
+
+.commandKpi strong {
+  display: block;
+  margin: 3px 0;
+  font-size: 25px;
+}
+
+.commandPanel {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.commandPanelHeader {
+  min-height: 52px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.commandPanelHeader h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.commandAttentionPanel {
+  margin-bottom: 14px;
+}
+
+.commandAttention {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 13px;
+}
+
+.commandAlert {
+  border-radius: 12px;
+  padding: 12px 13px;
+  background: var(--soft);
+  border-left: 4px solid var(--border);
+}
+
+.commandAlert.danger {
+  border-left-color: var(--red2);
+}
+
+.commandAlert.warning {
+  border-left-color: #d97706;
+}
+
+.commandAlert.info {
+  border-left-color: #2563eb;
+}
+
+.commandAlert strong,
+.commandAlert span {
+  display: block;
+}
+
+.commandAlert span {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.commandWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.commandTableWrap {
+  overflow-x: auto;
+}
+
+.commandTable {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.commandTable th,
+.commandTable td {
+  padding: 11px 13px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.commandTable th {
+  color: var(--muted);
+  background: var(--box-bg);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.commandTable tbody tr {
+  cursor: pointer;
+}
+
+.commandTable tbody tr:hover,
+.commandTable tbody tr.selected {
+  background: var(--box-bg);
+}
+
+.commandEventName strong,
+.commandEventName small {
+  display: block;
+}
+
+.commandStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.commandStatus::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.commandStatus.confirmed {
+  color: #15803d;
+}
+
+.commandStatus.unconfirmed {
+  color: #b45309;
+}
+
+.commandStatus.unstaffed {
+  color: var(--red2);
+}
+
+.commandEditButton {
+  width: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--white);
+  color: var(--red2);
+  font-size: 13px;
+}
+
+.commandEmpty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.commandEventDetail {
+  padding: 16px;
+}
+
+.commandDetailTitle {
+  align-items: flex-start;
+}
+
+.commandDetailTitle h3 {
+  margin: 0;
+}
+
+.commandDetailTitle p {
+  margin-top: 3px;
+}
+
+.commandCallout {
+  margin: 13px 0;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--soft);
+  font-weight: 700;
+}
+
+.commandFacts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.commandFact span,
+.commandFact strong {
+  display: block;
+}
+
+.commandFact span {
+  margin-bottom: 2px;
+  font-size: 11px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.commandDetailSection {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.commandDetailSection h4 {
+  margin: 0 0 9px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.commandStep {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: 7px;
+  margin: 8px 0;
+}
+
+.commandStep::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+}
+
+.commandStep.done::before {
+  border-color: #15803d;
+  background: #15803d;
+}
+
+.commandStep strong,
+.commandStep small {
+  display: block;
+}
+
+.commandDetailActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.commandDetailActions button {
+  padding: 10px;
+  font-size: 14px;
+}
+
+.commandEditForm label {
+  margin-bottom: 11px;
+  font-size: 13px;
+}
+
+.commandEditForm input,
+.commandEditForm select,
+.commandEditForm textarea {
+  margin-top: 5px;
+  padding: 10px;
+}
+
+.commandEditGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.commandSwitchRow {
+  align-items: flex-start;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.commandSwitchRow input {
+  width: auto;
+  margin: 3px 0 0;
+}
+
+.commandLowerGrid {
+  display: grid;
+  grid-template-columns: 1fr minmax(360px, .75fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.commandRegionStaffing {
+  padding: 13px 16px;
+}
+
+.commandRegionRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 140px) 1fr 42px;
+  gap: 10px;
+  align-items: center;
+  margin: 9px 0;
+}
+
+.commandRegionTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.commandRegionTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--red2);
+}
+
+.commandQueue {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.commandQueueItem {
+  padding: 14px 16px;
+  width: 100%;
+  border-radius: 0;
+  background: var(--white);
+  color: var(--text);
+  text-align: left;
+}
+
+.commandQueueItem:hover {
+  background: var(--box-bg);
+}
+
+.commandQueueItem + .commandQueueItem {
+  border-top: 1px solid var(--border);
+}
+
+.commandQueueItem strong,
+.commandQueueItem small {
+  display: block;
+}
+
+.commandQueueCount {
+  min-width: 34px;
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--soft);
+  font-weight: 800;
+}
+
+@media (max-width: 1120px) {
+  .commandKpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .commandWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .commandLowerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .commandFilters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .commandSearchLabel {
+    grid-column: 1 / -1;
+  }
+
+  .commandAttention {
+    grid-template-columns: 1fr;
+  }
+}

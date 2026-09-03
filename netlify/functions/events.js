@@ -89,6 +89,31 @@ function bookingHasHistory(fields) {
   return Boolean(fields["Clock In Timestamp"] || fields["Clock Out Timestamp"] || fields["Recap Submitted Timestamp"] || fields["Recap Approved"] || fields["Ready for Payroll"] || fields.Paid);
 }
 
+function bookingAmbassadorName(fields) {
+  const direct = asText(value(fields, ["Ambassador Name Text", "Ambassador Name", "Ambassador Full Name"]));
+  if (direct) return direct;
+  const assignment = String(fields?.Assignment || "");
+  return assignment.includes("—") ? assignment.split("—").pop().trim() : "";
+}
+
+function checkboxValue(input) {
+  return input === true || input === 1 || input === "1" || String(input || "").toLowerCase() === "true";
+}
+
+function isValidDateInput(input) {
+  const match = String(input || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
+function isValidTimeInput(input) {
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(input || ""));
+}
+
 function json(statusCode, body, extraHeaders = {}) {
   return {
     statusCode,
@@ -99,13 +124,21 @@ function json(statusCode, body, extraHeaders = {}) {
 
 function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecord }) {
   async function listEvents() {
-    const [records, brandRecords, storeRecords] = await Promise.all([
+    const [records, brandRecords, storeRecords, bookingRecords] = await Promise.all([
       api.listRecords(api.TABLES.EVENTS),
       api.listRecords(api.TABLES.BRANDS),
-      api.listRecords(api.TABLES.STORES)
+      api.listRecords(api.TABLES.STORES),
+      api.listRecords(api.TABLES.BOOKINGS, { maxRecords: "1000" })
     ]);
     const brandNameById = Object.fromEntries(brandRecords.map((record) => [record.id, record.fields?.["Brand Name"] || record.fields?.Name || ""]));
     const storeById = Object.fromEntries(storeRecords.map((record) => [record.id, record.fields || {}]));
+    const bookingsByEventId = {};
+    bookingRecords.forEach((record) => {
+      linkedIds(record.fields?.Event).forEach((eventId) => {
+        bookingsByEventId[eventId] ||= [];
+        bookingsByEventId[eventId].push(record);
+      });
+    });
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
@@ -122,6 +155,12 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
       const brandLookup = safeLinkedText(value(f, ["Brand Name"]));
       const brandIds = linkedIds(value(f, ["Brand"]));
       const state = storeRecord.State || "";
+      const bookings = (bookingsByEventId[record.id] || []).map((booking) => ({
+        id: booking.id,
+        ambassadorName: bookingAmbassadorName(booking.fields || {}),
+        confirmed: Boolean(booking.fields?.["Booking Confirmed"]),
+        historyLocked: bookingHasHistory(booking.fields || {})
+      }));
       return {
         id: record.id,
         name,
@@ -132,11 +171,18 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         localEndTime: localTimePart(endTime, state),
         hourlyRate: value(f, ["Hourly Rate", "Pay Rate", "Event Pay Rate"]),
         status: value(f, ["Status"]),
+        eventArea: asText(value(f, ["Event Area", "Area", "Region"])),
+        portalVisible: checkboxValue(value(f, ["Portal Visible", "Publish to Portal"])),
+        details: asText(value(f, ["Details", "Details / Notes", "Notes"])),
         brand: brandLookup || brandIds.map((id) => brandNameById[id]).filter(Boolean).join(", ") || safeLinkedText(value(f, ["Brand"])),
         store,
         state,
         address: asText(value(f, ["Store Address", "Address", "Full Address"])) || storeRecord.Address || "",
-        dateForFilter: startTime || eventDate
+        dateForFilter: startTime || eventDate,
+        bookings,
+        bookingCount: bookings.length,
+        confirmedBookingCount: bookings.filter((booking) => booking.confirmed).length,
+        ambassadorNames: bookings.map((booking) => booking.ambassadorName).filter(Boolean)
       };
     }).filter((event) => {
       if (!event.eventDate || !event.startTime || !event.endTime) return false;
@@ -148,26 +194,58 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
   async function updateEventSchedule(body) {
     const { eventId, eventDate, startTime, endTime } = body;
     if (!isAirtableRecordId(eventId)) return json(400, { error: "Select a valid event." });
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(eventDate || "")) || !/^\d{2}:\d{2}$/.test(String(startTime || "")) || !/^\d{2}:\d{2}$/.test(String(endTime || ""))) {
+    const scheduleKeys = ["eventDate", "startTime", "endTime"];
+    const scheduleRequested = scheduleKeys.some((key) => Object.prototype.hasOwnProperty.call(body, key));
+    if (scheduleRequested && (!isValidDateInput(eventDate) || !isValidTimeInput(startTime) || !isValidTimeInput(endTime))) {
       return json(400, { error: "Enter the event date, start time, and end time." });
     }
-    if (startTime === endTime) return json(400, { error: "Start time and end time cannot be the same." });
+    if (scheduleRequested && startTime === endTime) return json(400, { error: "Start time and end time cannot be the same." });
 
-    const eventRecord = await api.airtableRequest(`${encodeURIComponent(api.TABLES.EVENTS)}/${eventId}`);
-    const storeId = linkedIds(eventRecord.fields?.Store)[0];
-    const storeRecord = storeId ? await api.airtableRequest(`${encodeURIComponent(api.TABLES.STORES)}/${storeId}`) : null;
-    const state = storeRecord?.fields?.State || "";
-    const endDate = endTime <= startTime ? addDays(eventDate, 1) : eventDate;
-    const scheduledStart = isoDateTimeInEventZone(eventDate, startTime, state);
-    const scheduledEnd = isoDateTimeInEventZone(endDate, endTime, state);
+    const eventFields = {};
+    let scheduledStart = "";
+    let scheduledEnd = "";
+    let activeBookings = [];
+    let preservedBookings = 0;
+    let reconfirmationBookings = [];
 
-    await api.updateRecord(api.TABLES.EVENTS, eventId, { "Event Date": eventDate, "Start Time": scheduledStart, "End Time": scheduledEnd });
+    if (scheduleRequested) {
+      const eventRecord = await api.airtableRequest(`${encodeURIComponent(api.TABLES.EVENTS)}/${eventId}`);
+      const storeId = linkedIds(eventRecord.fields?.Store)[0];
+      const storeRecord = storeId ? await api.airtableRequest(`${encodeURIComponent(api.TABLES.STORES)}/${storeId}`) : null;
+      const state = storeRecord?.fields?.State || "";
+      const endDate = endTime <= startTime ? addDays(eventDate, 1) : eventDate;
+      scheduledStart = isoDateTimeInEventZone(eventDate, startTime, state);
+      scheduledEnd = isoDateTimeInEventZone(endDate, endTime, state);
+      eventFields["Event Date"] = eventDate;
+      eventFields["Start Time"] = scheduledStart;
+      eventFields["End Time"] = scheduledEnd;
 
-    const bookings = await api.listRecords(api.TABLES.BOOKINGS, { maxRecords: "1000" });
-    const linkedBookings = bookings.filter((record) => linkedIds(record.fields?.Event).includes(eventId));
-    const activeBookings = linkedBookings.filter((record) => !bookingHasHistory(record.fields || {}));
-    const preservedBookings = linkedBookings.length - activeBookings.length;
-    const reconfirmationBookings = activeBookings.filter((record) => Boolean(record.fields?.["Booking Confirmed"]));
+      const bookings = await api.listRecords(api.TABLES.BOOKINGS, { maxRecords: "1000" });
+      const linkedBookings = bookings.filter((record) => linkedIds(record.fields?.Event).includes(eventId));
+      activeBookings = linkedBookings.filter((record) => !bookingHasHistory(record.fields || {}));
+      preservedBookings = linkedBookings.length - activeBookings.length;
+      reconfirmationBookings = activeBookings.filter((record) => Boolean(record.fields?.["Booking Confirmed"]));
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "eventArea")) {
+      const eventArea = String(body.eventArea || "").trim();
+      if (!eventArea) return json(400, { error: "Select an event area." });
+      eventFields["Event Area"] = eventArea;
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "hourlyRate")) {
+      const hourlyRate = Number(body.hourlyRate);
+      if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) return json(400, { error: "Enter a valid hourly rate." });
+      eventFields["Hourly Rate"] = String(hourlyRate);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "details")) eventFields.Details = String(body.details || "").trim();
+    if (Object.prototype.hasOwnProperty.call(body, "portalVisible")) {
+      if (typeof body.portalVisible !== "boolean") return json(400, { error: "Portal visibility must be true or false." });
+      eventFields["Portal Visible"] = body.portalVisible;
+    }
+    if (Object.keys(eventFields).length === 0) return json(400, { error: "No event changes were provided." });
+
+    await api.updateRecord(api.TABLES.EVENTS, eventId, eventFields);
+
     await Promise.all(activeBookings.map((record) => {
       const fields = {
         "Scheduled Start Snapshot": scheduledStart,
@@ -184,8 +262,9 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
     return json(200, {
       eventId,
       eventDate,
-      startTime: scheduledStart,
-      endTime: scheduledEnd,
+      startTime: scheduledStart || null,
+      endTime: scheduledEnd || null,
+      updatedFields: eventFields,
       bookingsUpdated: activeBookings.length,
       bookingsPreserved: preservedBookings,
       bookingsReconfirmationRequired: reconfirmationBookings.length
@@ -200,7 +279,15 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
           "Netlify-CDN-Cache-Control": "no-store"
         });
       }
-      if (event.httpMethod === "PATCH") return updateEventSchedule(JSON.parse(event.body || "{}"));
+      if (event.httpMethod === "PATCH") {
+        let body;
+        try {
+          body = JSON.parse(event.body || "{}");
+        } catch (_error) {
+          return json(400, { error: "Invalid JSON body." });
+        }
+        return updateEventSchedule(body);
+      }
       return json(405, { error: "Method not allowed." });
     } catch (err) {
       return json(err.statusCode || 500, { error: err.message || "Event request failed." });

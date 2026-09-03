@@ -18,6 +18,7 @@
     button.setAttribute("aria-label", desktop ? "Switch to mobile layout" : "Switch to desktop layout");
     button.setAttribute("aria-pressed", desktop ? "true" : "false");
     localStorage.setItem(STORAGE_KEY, desktop ? "desktop" : "mobile");
+    document.dispatchEvent(new CustomEvent("amore:layoutchange", { detail: { mode: desktop ? "desktop" : "mobile" } }));
   }
 
   applyMode(preferredMode());

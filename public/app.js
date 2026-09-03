@@ -124,6 +124,9 @@ function switchPage(pageName) {
   const isAssign = pageName === "assign";
   const isConfirm = pageName === "confirm";
 
+  $("commandCenterPage")?.classList.remove("active");
+  $("overviewTab")?.classList.remove("active");
+
   $("addEventPage").classList.toggle("active", isAdd);
   $("assignPage").classList.toggle("active", isAssign);
   $("confirmPage").classList.toggle("active", isConfirm);
@@ -141,6 +144,12 @@ function switchPage(pageName) {
     loadConfirmData();
   }
 }
+
+window.openEventInStaffing = async function (eventId) {
+  switchPage("assign");
+  await refreshPlannerEvents({ quiet: false });
+  if (plannerEvents.some((event) => event.id === eventId)) selectEvent(eventId);
+};
 
 async function loadConfigAndGoogle() {
   const res = await fetch("/api/config");

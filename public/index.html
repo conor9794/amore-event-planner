@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/recap-review.css" />
   <link rel="stylesheet" href="/todays-events.css" />
   <link rel="stylesheet" href="/payroll.css" />
+  <link rel="stylesheet" href="/command-center.css" />
 </head>
 <body>
   <main class="app">
@@ -25,6 +26,7 @@
     </header>
 
     <nav class="tabs" aria-label="Planner pages">
+      <button type="button" id="overviewTab" class="tab desktopOnlyTab">Overview</button>
       <button type="button" id="addEventTab" class="tab active">Add Event</button>
       <button type="button" id="assignTab" class="tab">Manage Events & Staff</button>
       <button type="button" id="confirmTab" class="tab">Confirm Booking</button>
@@ -32,6 +34,78 @@
       <button type="button" id="recapTab" class="tab">Recap Review</button>
       <button type="button" id="payrollTab" class="tab">Payroll</button>
     </nav>
+
+    <section id="commandCenterPage" class="page desktopOnly" aria-labelledby="commandCenterHeading">
+      <div class="commandHeader">
+        <div>
+          <div class="eyebrow">Desktop Command Center</div>
+          <h2 id="commandCenterHeading">Operations Overview</h2>
+          <p>See what is coming up, handle exceptions, and update events without leaving the dashboard.</p>
+        </div>
+        <button type="button" id="commandAddEventBtn" class="primary commandPrimaryAction">Add Event</button>
+      </div>
+
+      <div class="commandFilters" aria-label="Dashboard filters">
+        <label>Time period
+          <select id="commandPeriodFilter">
+            <option value="all">All upcoming</option>
+            <option value="7">Next 7 days</option>
+            <option value="30">Next 30 days</option>
+          </select>
+        </label>
+        <label>Region
+          <select id="commandRegionFilter"><option value="all">All regions</option></select>
+        </label>
+        <label>Brand
+          <select id="commandBrandFilter"><option value="all">All brands</option></select>
+        </label>
+        <label class="commandSearchLabel">Search
+          <input id="commandSearch" type="search" placeholder="Brand, store, event, or ambassador..." />
+        </label>
+        <button type="button" id="commandRefreshBtn" class="secondary commandRefresh">Refresh</button>
+      </div>
+
+      <div id="commandMessage" class="message hidden" role="status"></div>
+      <div id="commandKpis" class="commandKpis" aria-label="Operations summary"></div>
+
+      <section class="commandPanel commandAttentionPanel" aria-labelledby="commandAttentionHeading">
+        <div class="commandPanelHeader"><h3 id="commandAttentionHeading">Needs Attention</h3></div>
+        <div id="commandAttention" class="commandAttention"></div>
+      </section>
+
+      <div class="commandWorkspace">
+        <section class="commandPanel commandEventsPanel" aria-labelledby="commandEventsHeading">
+          <div class="commandPanelHeader">
+            <div><h3 id="commandEventsHeading">Upcoming Events</h3><span id="commandUpdated" class="commandUpdated"></span></div>
+          </div>
+          <div class="commandTableWrap">
+            <table class="commandTable">
+              <thead><tr><th>Event</th><th>Date &amp; Time</th><th>Region</th><th>Ambassador</th><th>Status</th><th>Quick Action</th></tr></thead>
+              <tbody id="commandEventRows"></tbody>
+            </table>
+          </div>
+          <div id="commandEmpty" class="commandEmpty hidden"></div>
+        </section>
+
+        <aside class="commandPanel commandDetailPanel" aria-labelledby="commandDetailHeading">
+          <div class="commandPanelHeader"><h3 id="commandDetailHeading">Event Details</h3></div>
+          <div id="commandEventDetail" class="commandEventDetail" aria-live="polite">
+            <p>Select an event to view and modify it.</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="commandLowerGrid">
+        <section class="commandPanel" aria-labelledby="commandRegionStaffingHeading">
+          <div class="commandPanelHeader"><h3 id="commandRegionStaffingHeading">Staffing by Region</h3></div>
+          <div id="commandRegionStaffing" class="commandRegionStaffing"></div>
+        </section>
+        <section class="commandPanel commandQueuePanel" aria-labelledby="commandQueueHeading">
+          <div class="commandPanelHeader"><h3 id="commandQueueHeading">Workflow Queue</h3></div>
+          <div id="commandQueue" class="commandQueue"></div>
+        </section>
+      </div>
+    </section>
 
     <section id="addEventPage" class="page active">
       <section class="card">
@@ -282,5 +356,7 @@
   <script src="/recap-payroll-scheduled.js"></script>
   <script src="/todays-events.js"></script>
   <script src="/payroll.js"></script>
+  <script src="/command-center-core.js"></script>
+  <script src="/command-center.js"></script>
 </body>
 </html>
