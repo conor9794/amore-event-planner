@@ -59,6 +59,13 @@
     }, 0);
   }
 
+  function relevantUnconfirmedBookings(events, bookings) {
+    const relevantIds = new Set((events || []).flatMap((event) => (event.bookings || [])
+      .filter((booking) => !booking.confirmed && !booking.historyLocked)
+      .map((booking) => booking.id)));
+    return (bookings || []).filter((booking) => relevantIds.has(booking.id));
+  }
+
   function metrics(events, unconfirmed, recaps, payroll, now = new Date()) {
     const upcoming = events || [];
     return {
@@ -90,5 +97,5 @@
     return payload;
   }
 
-  return { dateValue, operationalStatus, withinDays, filterEvents, payrollTotal, metrics, editPayload };
+  return { dateValue, operationalStatus, withinDays, filterEvents, payrollTotal, relevantUnconfirmedBookings, metrics, editPayload };
 });

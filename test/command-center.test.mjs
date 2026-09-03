@@ -74,6 +74,18 @@ test("event edit payload includes the complete schedule when a time changes", ()
   assert.equal(payload.endTime, "21:00");
 });
 
+test("dashboard excludes old, confirmed, and history-locked bookings from its confirmation count", () => {
+  const upcoming = [{
+    bookings: [
+      { id: "active", confirmed: false, historyLocked: false },
+      { id: "confirmed", confirmed: true, historyLocked: false },
+      { id: "historical", confirmed: false, historyLocked: true }
+    ]
+  }];
+  const allUnconfirmed = [{ id: "active" }, { id: "historical" }, { id: "old-event" }];
+  assert.deepEqual(core.relevantUnconfirmedBookings(upcoming, allUnconfirmed), [{ id: "active" }]);
+});
+
 test("desktop markup has unique ids, both dashboard scripts, and only two workflow queues", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);

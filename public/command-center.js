@@ -295,7 +295,7 @@
         fetchJson("/api/payroll")
       ]);
       state.events = eventsData.events || [];
-      state.unconfirmed = bookingsData.bookings || [];
+      state.unconfirmed = core.relevantUnconfirmedBookings(state.events, bookingsData.bookings || []);
       state.recaps = recapsData.recaps || [];
       state.payroll = payrollData.payroll || [];
       if (!state.events.some((event) => event.id === state.selectedEventId)) state.selectedEventId = state.events[0]?.id || "";
