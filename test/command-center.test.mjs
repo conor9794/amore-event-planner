@@ -31,6 +31,18 @@ test("command center statuses, filters, and metrics are deterministic", () => {
   });
 });
 
+test("past-event filters and history protection statuses are deterministic", () => {
+  const past = [
+    { id: "recent", startTime: "2026-09-01T18:00:00Z", historyLockedBookingCount: 1 },
+    { id: "older", startTime: "2026-08-01T18:00:00Z", historyLockedBookingCount: 0 },
+    { id: "too-old", startTime: "2026-05-01T18:00:00Z", historyLockedBookingCount: 0 }
+  ];
+  assert.deepEqual(core.pastOperationalStatus(past[0]), { key: "locked", label: "History protected" });
+  assert.deepEqual(core.pastOperationalStatus(past[1]), { key: "editable", label: "Editable" });
+  assert.deepEqual(core.filterEvents(past, { view: "past", period: "30" }, now).map((event) => event.id), ["recent"]);
+  assert.deepEqual(core.filterEvents(past, { view: "past", period: "90" }, now).map((event) => event.id), ["recent", "older"]);
+});
+
 test("event edit payload does not trigger schedule reconfirmation when times are unchanged", () => {
   assert.deepEqual(core.editPayload({
     id: "recABCDEFGHIJKLMN",
@@ -91,6 +103,7 @@ test("desktop markup has unique ids, both dashboard scripts, and only two workfl
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(new Set(ids).size, ids.length, "Every HTML id must be unique");
   assert.match(html, /command-center-core\.js[\s\S]*command-center\.js/);
+  assert.match(html, /id="commandViewFilter"/);
   assert.doesNotMatch(html, /Missing documents/i);
   const css = await readFile(new URL("../public/command-center.css", import.meta.url), "utf8");
   assert.match(css, /\.desktopOnly[\s\S]*display:\s*none/);

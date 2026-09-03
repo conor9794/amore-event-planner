@@ -1,4 +1,5 @@
 const { TABLES, airtableRequest, listRecords } = require("./_airtable");
+const { localDateForState } = require("./events");
 
 function linkedIds(value) {
   return Array.isArray(value) ? value : [];
@@ -35,6 +36,31 @@ function assertBookingCanChange(record) {
   }
 }
 
+async function bookingEventIsPast(record) {
+  const eventId = linkedIds(record.fields?.Event)[0];
+  if (!eventId) return false;
+  const eventRecord = await airtableRequest(`${encodeURIComponent(TABLES.EVENTS)}/${eventId}`);
+  const eventDate = String(eventRecord.fields?.["Event Date"] || eventRecord.fields?.Date || "").slice(0, 10);
+  if (!eventDate) return false;
+  const storeId = linkedIds(eventRecord.fields?.Store)[0];
+  const storeRecord = storeId ? await airtableRequest(`${encodeURIComponent(TABLES.STORES)}/${storeId}`) : null;
+  return eventDate < localDateForState(new Date(), storeRecord?.fields?.State || "");
+}
+
+function staffChangeFields(ambassadorId, historicalEdit) {
+  const fields = { Ambassador: [ambassadorId] };
+  if (!historicalEdit) {
+    Object.assign(fields, {
+      "Booking Confirmed": false,
+      "Booking Confirmed Email Sent": false,
+      "Pay Rate Snapshot": null,
+      "Send Save the Date": false,
+      "Save the Date Sent": false
+    });
+  }
+  return fields;
+}
+
 async function ensureNoDuplicate(eventIds, ambassadorId, bookingId) {
   if (!eventIds.length) return;
   const records = await listRecords(TABLES.BOOKINGS, { maxRecords: "1000" });
@@ -67,15 +93,8 @@ exports.handler = async (event) => {
       assertBookingCanChange(current);
       const eventIds = linkedIds((current.fields || {})["Event"]);
       await ensureNoDuplicate(eventIds, ambassadorId, bookingId);
-
-      const fields = {
-        "Ambassador": [ambassadorId],
-        "Booking Confirmed": false,
-        "Booking Confirmed Email Sent": false,
-        "Pay Rate Snapshot": null,
-        "Send Save the Date": false,
-        "Save the Date Sent": false
-      };
+      const historicalEdit = await bookingEventIsPast(current);
+      const fields = staffChangeFields(ambassadorId, historicalEdit);
 
       const updated = await airtableRequest(`${encodeURIComponent(TABLES.BOOKINGS)}/${bookingId}`, {
         method: "PATCH",
@@ -84,7 +103,9 @@ exports.handler = async (event) => {
 
       return json(200, {
         booking: updated,
-        message: "Staff changed. The replacement ambassador is now unconfirmed and can be confirmed from Confirm Booking."
+        message: historicalEdit
+          ? "Past-event staff corrected. Existing confirmation and pay-rate history were preserved."
+          : "Staff changed. The replacement ambassador is now unconfirmed and can be confirmed from Confirm Booking."
       });
     }
 
@@ -106,3 +127,4 @@ exports.handler = async (event) => {
 
 exports.bookingHasHistory = bookingHasHistory;
 exports.assertBookingCanChange = assertBookingCanChange;
+exports.staffChangeFields = staffChangeFields;

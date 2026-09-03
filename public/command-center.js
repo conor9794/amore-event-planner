@@ -4,12 +4,14 @@
   const core = window.CommandCenterCore;
   const state = {
     events: [],
+    pastEvents: [],
     unconfirmed: [],
     recaps: [],
     payroll: [],
     selectedEventId: "",
     loading: false,
-    loaded: false
+    loaded: false,
+    pastLoaded: false
   };
   const areas = ["Long Island", "NYC", "NY North Metro", "NJ", "CT", "Upstate NY", "MD", "DC", "MA", "FL"];
   const $ = (id) => document.getElementById(id);
@@ -73,10 +75,26 @@
     return event.eventArea || event.state || "Not set";
   }
 
+  function currentView() {
+    return $("commandViewFilter").value === "past" ? "past" : "upcoming";
+  }
+
+  function currentEvents() {
+    return currentView() === "past" ? state.pastEvents : state.events;
+  }
+
+  function updatePeriodOptions() {
+    const select = $("commandPeriodFilter");
+    const past = currentView() === "past";
+    select.innerHTML = past
+      ? '<option value="90">Previous 90 days</option><option value="30">Previous 30 days</option><option value="7">Previous 7 days</option>'
+      : '<option value="all">All upcoming</option><option value="7">Next 7 days</option><option value="30">Next 30 days</option>';
+  }
+
   function populateRegions() {
     const select = $("commandRegionFilter");
     const current = select.value;
-    const regions = [...new Set(state.events.map(eventRegion).filter((region) => region && region !== "Not set"))].sort();
+    const regions = [...new Set(currentEvents().map(eventRegion).filter((region) => region && region !== "Not set"))].sort();
     select.innerHTML = `<option value="all">All regions</option>${regions.map((region) => `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`).join("")}`;
     select.value = regions.includes(current) ? current : "all";
   }
@@ -84,13 +102,14 @@
   function populateBrands() {
     const select = $("commandBrandFilter");
     const current = select.value;
-    const brands = [...new Set(state.events.map((event) => event.brand).filter(Boolean))].sort();
+    const brands = [...new Set(currentEvents().map((event) => event.brand).filter(Boolean))].sort();
     select.innerHTML = `<option value="all">All brands</option>${brands.map((brand) => `<option value="${escapeHtml(brand)}">${escapeHtml(brand)}</option>`).join("")}`;
     select.value = brands.includes(current) ? current : "all";
   }
 
   function filteredEvents() {
-    return core.filterEvents(state.events, {
+    return core.filterEvents(currentEvents(), {
+      view: currentView(),
       period: $("commandPeriodFilter").value,
       region: $("commandRegionFilter").value,
       brand: $("commandBrandFilter").value,
@@ -140,7 +159,7 @@
 
   function renderRegionStaffing() {
     const grouped = {};
-    state.events.forEach((event) => {
+    currentEvents().forEach((event) => {
       const region = eventRegion(event);
       grouped[region] ||= { total: 0, staffed: 0 };
       grouped[region].total += 1;
@@ -150,16 +169,18 @@
     $("commandRegionStaffing").innerHTML = entries.length ? entries.map(([region, counts]) => {
       const percent = Math.round((counts.staffed / counts.total) * 100);
       return `<div class="commandRegionRow"><span>${escapeHtml(region)}</span><div class="commandRegionTrack" role="progressbar" aria-label="${escapeHtml(region)} staffing" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><strong>${percent}%</strong></div>`;
-    }).join("") : "<p>No upcoming regions to summarize.</p>";
+    }).join("") : `<p>No ${currentView() === "past" ? "past" : "upcoming"} regions to summarize.</p>`;
   }
 
   function renderRows() {
     const events = filteredEvents();
+    const past = currentView() === "past";
     const rows = $("commandEventRows");
+    $("commandEventsHeading").textContent = past ? "Past Events" : "Upcoming Events";
     $("commandEmpty").classList.toggle("hidden", events.length > 0);
-    $("commandEmpty").textContent = events.length ? "" : "No upcoming events match these filters.";
+    $("commandEmpty").textContent = events.length ? "" : `No ${past ? "past" : "upcoming"} events match these filters.`;
     rows.innerHTML = events.map((event) => {
-      const status = core.operationalStatus(event);
+      const status = past ? core.pastOperationalStatus(event) : core.operationalStatus(event);
       const ambassadors = event.ambassadorNames?.length ? event.ambassadorNames.join(", ") : "Not assigned";
       return `
         <tr data-event-id="${escapeHtml(event.id)}" class="${event.id === state.selectedEventId ? "selected" : ""}">
@@ -174,7 +195,7 @@
   }
 
   function selectedEvent() {
-    return state.events.find((event) => event.id === state.selectedEventId) || null;
+    return currentEvents().find((event) => event.id === state.selectedEventId) || null;
   }
 
   function renderDetail() {
@@ -183,39 +204,44 @@
       $("commandEventDetail").innerHTML = "<p>Select an event to view and modify it.</p>";
       return;
     }
-    const status = core.operationalStatus(event);
+    const past = currentView() === "past";
+    const status = past ? core.pastOperationalStatus(event) : core.operationalStatus(event);
     const ambassadors = event.ambassadorNames?.length ? event.ambassadorNames.join(", ") : "Not assigned";
+    const lockedCount = Number(event.historyLockedBookingCount || 0);
     $("commandEventDetail").innerHTML = `
       <div class="commandDetailTitle"><div><h3>${escapeHtml(event.name || "Untitled Event")}</h3><p>${escapeHtml([event.brand, event.store].filter(Boolean).join(" • "))}</p></div><span class="commandStatus ${status.key}">${escapeHtml(status.label)}</span></div>
       <div class="commandCallout">${escapeHtml(formatDate(event.eventDate))} · ${escapeHtml(eventTime(event))}</div>
+      ${past && lockedCount ? `<div class="commandCallout">${lockedCount} historical ${lockedCount === 1 ? "booking is" : "bookings are"} protected. Event details can be corrected, but attendance, recap, and payroll history will not be changed.</div>` : ""}
       <div class="commandFacts">
         <div class="commandFact"><span>Region</span><strong>${escapeHtml(eventRegion(event))}</strong></div>
         <div class="commandFact"><span>Ambassador</span><strong>${escapeHtml(ambassadors)}</strong></div>
         <div class="commandFact"><span>Hourly rate</span><strong>${escapeHtml(event.hourlyRate ? formatMoney(event.hourlyRate) : "Not set")}</strong></div>
-        <div class="commandFact"><span>Rep portal</span><strong>${event.portalVisible ? "Visible" : "Hidden"}</strong></div>
+        <div class="commandFact"><span>Rep portal</span><strong>${past ? "Hidden" : event.portalVisible ? "Visible" : "Hidden"}</strong></div>
       </div>
       ${event.address ? `<div class="commandDetailSection"><h4>Location</h4><p>${escapeHtml(event.address)}</p></div>` : ""}
       ${event.details ? `<div class="commandDetailSection"><h4>Notes</h4><p>${escapeHtml(event.details)}</p></div>` : ""}
       <div class="commandDetailSection"><h4>Event workflow</h4>
-        <div class="commandStep ${event.portalVisible ? "done" : ""}"><div><strong>${event.portalVisible ? "Event published" : "Event hidden"}</strong><small>Rep portal visibility</small></div></div>
+        <div class="commandStep ${past || event.portalVisible ? "done" : ""}"><div><strong>${past ? "Event completed" : event.portalVisible ? "Event published" : "Event hidden"}</strong><small>${past ? "Past events stay out of the rep portal" : "Rep portal visibility"}</small></div></div>
         <div class="commandStep ${Number(event.bookingCount || 0) > 0 ? "done" : ""}"><div><strong>Ambassador assigned</strong><small>${escapeHtml(ambassadors)}</small></div></div>
-        <div class="commandStep ${status.key === "confirmed" ? "done" : ""}"><div><strong>Booking confirmation</strong><small>${status.key === "confirmed" ? "All bookings confirmed" : "Waiting for operator"}</small></div></div>
-        <div class="commandStep"><div><strong>Clock-in and recap</strong><small>Available on the event date</small></div></div>
+        ${past ? `<div class="commandStep ${lockedCount ? "done" : ""}"><div><strong>Historical records</strong><small>${lockedCount ? "Attendance, recap, or payroll history protected" : "No protected booking history"}</small></div></div>` : `<div class="commandStep ${status.key === "confirmed" ? "done" : ""}"><div><strong>Booking confirmation</strong><small>${status.key === "confirmed" ? "All bookings confirmed" : "Waiting for operator"}</small></div></div><div class="commandStep"><div><strong>Clock-in and recap</strong><small>Available on the event date</small></div></div>`}
       </div>
       <div class="commandDetailActions">
         <button type="button" class="primary" data-edit-event="${escapeHtml(event.id)}">Edit event</button>
         <button type="button" class="secondary" data-manage-event="${escapeHtml(event.id)}">Manage staff</button>
-        ${status.key === "unconfirmed" ? `<button type="button" class="secondary" data-confirm-event>Confirm booking</button>` : ""}
+        ${!past && status.key === "unconfirmed" ? `<button type="button" class="secondary" data-confirm-event>Confirm booking</button>` : ""}
       </div>`;
   }
 
   function renderEditForm(event) {
     const regionOptions = [...new Set([...areas, event.eventArea].filter(Boolean))];
-    const hasConfirmed = Number(event.confirmedBookingCount || 0) > 0;
+    const past = currentView() === "past";
+    const activeConfirmedCount = Number(event.activeConfirmedBookingCount || 0);
+    const lockedCount = Number(event.historyLockedBookingCount || 0);
     $("commandEventDetail").innerHTML = `
       <form id="commandEditForm" class="commandEditForm">
         <div class="commandDetailTitle"><div><h3>Edit Event</h3><p>${escapeHtml(event.name || "Untitled Event")}</p></div></div>
-        ${hasConfirmed ? `<div class="commandCallout">Changing the schedule will require ${event.confirmedBookingCount} confirmed ${event.confirmedBookingCount === 1 ? "booking" : "bookings"} to be reconfirmed.</div>` : ""}
+        ${!past && activeConfirmedCount ? `<div class="commandCallout">Changing the schedule will require ${activeConfirmedCount} confirmed ${activeConfirmedCount === 1 ? "booking" : "bookings"} to be reconfirmed.</div>` : ""}
+        ${lockedCount ? `<div class="commandCallout">You can correct this event, but ${lockedCount} historical ${lockedCount === 1 ? "booking" : "bookings"} will keep the original attendance, recap, schedule, and payroll snapshots. Protected staff assignments cannot be changed.</div>` : ""}
         <label>Event date<input id="commandEditDate" type="date" value="${escapeHtml(event.eventDate || "")}" required></label>
         <div class="commandEditGrid">
           <label>Start time<input id="commandEditStart" type="time" value="${escapeHtml(event.localStartTime || "")}" required></label>
@@ -226,7 +252,7 @@
           <label>Hourly rate<input id="commandEditRate" type="number" min="0.01" step="0.01" value="${escapeHtml(event.hourlyRate || "")}" required></label>
         </div>
         <label>Details / notes<textarea id="commandEditDetails" rows="4">${escapeHtml(event.details || "")}</textarea></label>
-        <label class="commandSwitchRow"><span><strong>Visible in rep portal</strong><small>Allow ambassadors to see and apply for this event.</small></span><input id="commandEditPortal" type="checkbox" ${event.portalVisible ? "checked" : ""}></label>
+        <label class="commandSwitchRow"><span><strong>Visible in rep portal</strong><small>${past ? "Past events stay hidden from the rep portal." : "Allow ambassadors to see and apply for this event."}</small></span><input id="commandEditPortal" type="checkbox" ${!past && event.portalVisible ? "checked" : ""} ${past ? "disabled" : ""}></label>
         <div class="commandDetailActions"><button type="button" class="secondary" id="commandCancelEdit">Cancel</button><button type="submit" class="primary" id="commandSaveEdit">Save changes</button></div>
       </form>`;
     $("commandEditForm").addEventListener("submit", saveEvent);
@@ -249,7 +275,7 @@
         eventArea: $("commandEditArea").value,
         hourlyRate: $("commandEditRate").value,
         details: $("commandEditDetails").value,
-        portalVisible: $("commandEditPortal").checked
+        portalVisible: currentView() === "past" ? false : $("commandEditPortal").checked
       });
       const response = await fetch("/api/events", {
         method: "PATCH",
@@ -288,17 +314,23 @@
     $("commandRefreshBtn").disabled = true;
     if (!options.preserveMessage) showMessage("Refreshing operations…", "ok");
     try {
-      const [eventsData, bookingsData, recapsData, payrollData] = await Promise.all([
+      const requests = [
         fetchJson("/api/events"),
         fetchJson("/api/bookings?status=unconfirmed"),
         fetchJson("/api/recaps"),
         fetchJson("/api/payroll")
-      ]);
+      ];
+      if (currentView() === "past") requests.push(fetchJson("/api/events?view=past&days=90"));
+      const [eventsData, bookingsData, recapsData, payrollData, pastData] = await Promise.all(requests);
       state.events = eventsData.events || [];
+      if (pastData) {
+        state.pastEvents = pastData.events || [];
+        state.pastLoaded = true;
+      }
       state.unconfirmed = core.relevantUnconfirmedBookings(state.events, bookingsData.bookings || []);
       state.recaps = recapsData.recaps || [];
       state.payroll = payrollData.payroll || [];
-      if (!state.events.some((event) => event.id === state.selectedEventId)) state.selectedEventId = state.events[0]?.id || "";
+      if (!currentEvents().some((event) => event.id === state.selectedEventId)) state.selectedEventId = currentEvents()[0]?.id || "";
       state.loaded = true;
       renderAll();
       if (!options.preserveMessage) hideMessage();
@@ -309,6 +341,24 @@
       state.loading = false;
       $("commandRefreshBtn").disabled = false;
     }
+  }
+
+  async function showEventView() {
+    updatePeriodOptions();
+    state.selectedEventId = "";
+    if (currentView() === "past" && !state.pastLoaded) {
+      showMessage("Loading past events…", "ok");
+      try {
+        const data = await fetchJson("/api/events?view=past&days=90");
+        state.pastEvents = data.events || [];
+        state.pastLoaded = true;
+        hideMessage();
+      } catch (error) {
+        showMessage(error.message, "error");
+      }
+    }
+    state.selectedEventId = currentEvents()[0]?.id || "";
+    renderAll();
   }
 
   function overviewIsActive() {
@@ -339,6 +389,7 @@
   });
   $("commandAddEventBtn").addEventListener("click", () => openTab("addEventTab"));
   $("commandRefreshBtn").addEventListener("click", () => loadDashboard());
+  $("commandViewFilter").addEventListener("change", showEventView);
   ["commandPeriodFilter", "commandRegionFilter", "commandBrandFilter"].forEach((id) => $(id).addEventListener("change", renderRows));
   $("commandSearch").addEventListener("input", renderRows);
 

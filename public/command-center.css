@@ -38,7 +38,7 @@ body.desktop-mode .desktopOnly.page.active {
 
 .commandFilters {
   display: grid;
-  grid-template-columns: 140px 160px 160px minmax(220px, 1fr) auto;
+  grid-template-columns: 130px 145px 145px 145px minmax(200px, 1fr) auto;
   gap: 10px;
   align-items: end;
   margin-bottom: 14px;
@@ -232,6 +232,14 @@ body.desktop-mode .desktopOnly.page.active {
 
 .commandStatus.unstaffed {
   color: var(--red2);
+}
+
+.commandStatus.locked {
+  color: var(--muted);
+}
+
+.commandStatus.editable {
+  color: #2563eb;
 }
 
 .commandEditButton {
@@ -446,6 +454,14 @@ body.desktop-mode .desktopOnly.page.active {
 }
 
 @media (max-width: 1120px) {
+  .commandFilters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .commandSearchLabel {
+    grid-column: span 2;
+  }
+
   .commandKpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

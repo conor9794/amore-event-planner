@@ -298,7 +298,7 @@ async function loadAssignData() {
 
   try {
     const [eventsRes, ambassadorsRes] = await Promise.all([
-      fetch(`/api/events?refresh=${Date.now()}`, { cache: "no-store" }),
+      fetch(`/api/events?view=all&days=90&refresh=${Date.now()}`, { cache: "no-store" }),
       fetch("/api/ambassadors", { cache: "no-store" })
     ]);
     const eventsData = await eventsRes.json();
@@ -334,7 +334,7 @@ async function refreshPlannerEvents({ quiet = true } = {}) {
 
   plannerEventRefreshPromise = (async () => {
     try {
-      const res = await fetch(`/api/events?refresh=${Date.now()}`, { cache: "no-store" });
+      const res = await fetch(`/api/events?view=all&days=90&refresh=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not refresh events.");
 

@@ -29,6 +29,20 @@ test("booking history lock covers attendance, recaps, and payroll", () => {
   );
 });
 
+test("past staff corrections preserve confirmation and pay-rate fields", () => {
+  assert.deepEqual(staffBookings.staffChangeFields("recAMBASSADORABC", true), {
+    Ambassador: ["recAMBASSADORABC"]
+  });
+  assert.deepEqual(staffBookings.staffChangeFields("recAMBASSADORABC", false), {
+    Ambassador: ["recAMBASSADORABC"],
+    "Booking Confirmed": false,
+    "Booking Confirmed Email Sent": false,
+    "Pay Rate Snapshot": null,
+    "Send Save the Date": false,
+    "Save the Date Sent": false
+  });
+});
+
 test("schedule edit updates the event and active booking snapshots while preserving history", async () => {
   const updates = [];
   const handler = createHandler({
@@ -134,6 +148,33 @@ test("event list responses explicitly bypass browser and CDN caches", async () =
   assert.equal(response.headers["Netlify-CDN-Cache-Control"], "no-store");
 });
 
+test("event views separate upcoming events from the previous 90 days using each event's local date", async () => {
+  const events = [
+    { id: "future", fields: { "Event Name": "Future", "Event Date": "2026-09-10", "Start Time": "2026-09-10T14:00:00Z", "End Time": "2026-09-10T16:00:00Z", Store: ["ny"] } },
+    { id: "todayLocal", fields: { "Event Name": "Still Today in New York", "Event Date": "2026-09-02", "Start Time": "2026-09-03T01:00:00Z", "End Time": "2026-09-03T02:00:00Z", Store: ["ny"] } },
+    { id: "recent", fields: { "Event Name": "Recent", "Event Date": "2026-09-01", "Start Time": "2026-09-01T14:00:00Z", "End Time": "2026-09-01T16:00:00Z", Store: ["ny"] } },
+    { id: "olderRecent", fields: { "Event Name": "Older Recent", "Event Date": "2026-08-01", "Start Time": "2026-08-01T14:00:00Z", "End Time": "2026-08-01T16:00:00Z", Store: ["ny"] } },
+    { id: "tooOld", fields: { "Event Name": "Too Old", "Event Date": "2026-05-01", "Start Time": "2026-05-01T14:00:00Z", "End Time": "2026-05-01T16:00:00Z", Store: ["ny"] } }
+  ];
+  const handler = createHandler({
+    TABLES,
+    now: () => new Date("2026-09-03T02:00:00Z"),
+    listRecords: async (table) => {
+      if (table === TABLES.EVENTS) return events;
+      if (table === TABLES.STORES) return [{ id: "ny", fields: { State: "NY" } }];
+      return [];
+    }
+  });
+
+  const upcoming = JSON.parse((await handler({ httpMethod: "GET" })).body).events;
+  const past = JSON.parse((await handler({ httpMethod: "GET", queryStringParameters: { view: "past", days: "90" } })).body).events;
+  const all = JSON.parse((await handler({ httpMethod: "GET", queryStringParameters: { view: "all", days: "90" } })).body).events;
+
+  assert.deepEqual(upcoming.map((event) => event.id), ["todayLocal", "future"]);
+  assert.deepEqual(past.map((event) => event.id), ["recent", "olderRecent"]);
+  assert.deepEqual(all.map((event) => event.id), ["olderRecent", "recent", "todayLocal", "future"]);
+});
+
 test("event list includes desktop staffing and editing details", async () => {
   const handler = createHandler({
     TABLES,
@@ -156,7 +197,7 @@ test("event list includes desktop staffing and editing details", async () => {
       if (table === TABLES.BRANDS) return [{ id: "recBRANDABCDEFGHIJ", fields: { "Brand Name": "Harvest" } }];
       if (table === TABLES.BOOKINGS) return [
         { id: "recBOOKINGABCDEF", fields: { Event: ["recABCDEFGHIJKLMN"], "Ambassador Name Text": "Alex Rivera", "Booking Confirmed": true } },
-        { id: "recBOOKINGGHIJKL", fields: { Event: ["recABCDEFGHIJKLMN"], Assignment: "Harvest — Sam Lee" } }
+        { id: "recBOOKINGGHIJKL", fields: { Event: ["recABCDEFGHIJKLMN"], Assignment: "Harvest — Sam Lee", "Recap Approved": true } }
       ];
       throw new Error(`Unexpected table: ${table}`);
     }
@@ -170,7 +211,41 @@ test("event list includes desktop staffing and editing details", async () => {
   assert.equal(event.details, "Bring tablecloth");
   assert.equal(event.bookingCount, 2);
   assert.equal(event.confirmedBookingCount, 1);
+  assert.equal(event.activeConfirmedBookingCount, 1);
+  assert.equal(event.historyLockedBookingCount, 1);
+  assert.equal(event.hasHistoricalActivity, true);
   assert.deepEqual(event.ambassadorNames, ["Alex Rivera", "Sam Lee"]);
+});
+
+test("past schedule corrections keep active booking confirmation while preserving locked history", async () => {
+  const updates = [];
+  const handler = createHandler({
+    TABLES,
+    now: () => new Date("2026-09-20T12:00:00Z"),
+    airtableRequest: async (path) => path.startsWith("Events/")
+      ? { fields: { Store: ["recSTOREABCDEFGHIJ"] } }
+      : { fields: { State: "NY" } },
+    listRecords: async () => [
+      { id: "recCONFIRMEDABCDE", fields: { Event: ["recABCDEFGHIJKLMN"], "Booking Confirmed": true, "Pay Rate Snapshot": 30 } },
+      { id: "recLOCKEDABCDEFG", fields: { Event: ["recABCDEFGHIJKLMN"], "Ready for Payroll": true } }
+    ],
+    updateRecord: async (table, id, fields) => {
+      updates.push({ table, id, fields });
+      return { id, fields };
+    }
+  });
+  const response = await handler({
+    httpMethod: "PATCH",
+    body: JSON.stringify({ eventId: "recABCDEFGHIJKLMN", eventDate: "2026-09-12", startTime: "18:30", endTime: "21:00" })
+  });
+  const body = JSON.parse(response.body);
+  const bookingUpdate = updates.find((update) => update.id === "recCONFIRMEDABCDE");
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.bookingsReconfirmationRequired, 0);
+  assert.equal(body.bookingsPreserved, 1);
+  assert.equal(bookingUpdate.fields["Booking Confirmed"], undefined);
+  assert.equal(bookingUpdate.fields["Pay Rate Snapshot"], undefined);
 });
 
 test("non-schedule desktop edit only updates the event fields", async () => {

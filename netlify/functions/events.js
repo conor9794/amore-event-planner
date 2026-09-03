@@ -52,6 +52,24 @@ function stateToTimeZone(state) {
   return "America/New_York";
 }
 
+function localDateForState(input, state) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: stateToTimeZone(state),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(input);
+  const part = (type) => parts.find((item) => item.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function calendarDaysBetween(earlier, later) {
+  const start = new Date(`${String(earlier).slice(0, 10)}T12:00:00Z`);
+  const end = new Date(`${String(later).slice(0, 10)}T12:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return Number.POSITIVE_INFINITY;
+  return Math.floor((end.getTime() - start.getTime()) / 86400000);
+}
+
 function offsetForTimeZone(date, time, timeZone) {
   const probe = new Date(`${date}T${time}:00Z`);
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset", hour: "2-digit", minute: "2-digit" }).formatToParts(probe);
@@ -123,7 +141,7 @@ function json(statusCode, body, extraHeaders = {}) {
 }
 
 function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecord }) {
-  async function listEvents() {
+  async function listEvents(options = {}) {
     const [records, brandRecords, storeRecords, bookingRecords] = await Promise.all([
       api.listRecords(api.TABLES.EVENTS),
       api.listRecords(api.TABLES.BRANDS),
@@ -139,8 +157,10 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         bookingsByEventId[eventId].push(record);
       });
     });
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const view = ["upcoming", "past", "all"].includes(options.view) ? options.view : "upcoming";
+    const requestedDays = Number(options.days);
+    const days = Number.isFinite(requestedDays) ? Math.min(365, Math.max(1, Math.floor(requestedDays))) : 90;
+    const now = typeof api.now === "function" ? api.now() : new Date();
 
     return records.map((record) => {
       const f = record.fields || {};
@@ -182,13 +202,21 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         bookings,
         bookingCount: bookings.length,
         confirmedBookingCount: bookings.filter((booking) => booking.confirmed).length,
+        activeConfirmedBookingCount: bookings.filter((booking) => booking.confirmed && !booking.historyLocked).length,
+        historyLockedBookingCount: bookings.filter((booking) => booking.historyLocked).length,
+        hasHistoricalActivity: bookings.some((booking) => booking.historyLocked),
         ambassadorNames: bookings.map((booking) => booking.ambassadorName).filter(Boolean)
       };
     }).filter((event) => {
       if (!event.eventDate || !event.startTime || !event.endTime) return false;
-      const d = new Date(event.startTime || event.eventDate);
-      return Number.isNaN(d.getTime()) || d >= now;
-    }).sort((a, b) => dateSortValue(a) - dateSortValue(b));
+      const eventDate = String(event.eventDate).slice(0, 10);
+      const today = localDateForState(now, event.state);
+      const isPast = eventDate < today;
+      const isRecentPast = isPast && calendarDaysBetween(eventDate, today) <= days;
+      if (view === "past") return isRecentPast;
+      if (view === "all") return !isPast || isRecentPast;
+      return !isPast;
+    }).sort((a, b) => view === "past" ? dateSortValue(b) - dateSortValue(a) : dateSortValue(a) - dateSortValue(b));
   }
 
   async function updateEventSchedule(body) {
@@ -207,12 +235,15 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
     let activeBookings = [];
     let preservedBookings = 0;
     let reconfirmationBookings = [];
+    let historicalScheduleEdit = false;
 
     if (scheduleRequested) {
       const eventRecord = await api.airtableRequest(`${encodeURIComponent(api.TABLES.EVENTS)}/${eventId}`);
       const storeId = linkedIds(eventRecord.fields?.Store)[0];
       const storeRecord = storeId ? await api.airtableRequest(`${encodeURIComponent(api.TABLES.STORES)}/${storeId}`) : null;
       const state = storeRecord?.fields?.State || "";
+      const currentDate = typeof api.now === "function" ? api.now() : new Date();
+      historicalScheduleEdit = eventDate < localDateForState(currentDate, state);
       const endDate = endTime <= startTime ? addDays(eventDate, 1) : eventDate;
       scheduledStart = isoDateTimeInEventZone(eventDate, startTime, state);
       scheduledEnd = isoDateTimeInEventZone(endDate, endTime, state);
@@ -224,7 +255,9 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
       const linkedBookings = bookings.filter((record) => linkedIds(record.fields?.Event).includes(eventId));
       activeBookings = linkedBookings.filter((record) => !bookingHasHistory(record.fields || {}));
       preservedBookings = linkedBookings.length - activeBookings.length;
-      reconfirmationBookings = activeBookings.filter((record) => Boolean(record.fields?.["Booking Confirmed"]));
+      reconfirmationBookings = historicalScheduleEdit
+        ? []
+        : activeBookings.filter((record) => Boolean(record.fields?.["Booking Confirmed"]));
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "eventArea")) {
@@ -251,7 +284,7 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         "Scheduled Start Snapshot": scheduledStart,
         "Scheduled End Snapshot": scheduledEnd
       };
-      if (record.fields?.["Booking Confirmed"]) {
+      if (record.fields?.["Booking Confirmed"] && !historicalScheduleEdit) {
         fields["Booking Confirmed"] = false;
         fields["Booking Confirmed Email Sent"] = false;
         fields["Pay Rate Snapshot"] = null;
@@ -274,7 +307,8 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
   return async function handler(event) {
     try {
       if (event.httpMethod === "GET") {
-        return json(200, { events: await listEvents() }, {
+        const query = event.queryStringParameters || {};
+        return json(200, { events: await listEvents({ view: query.view, days: query.days }) }, {
           "Cache-Control": "no-store, max-age=0, must-revalidate",
           "Netlify-CDN-Cache-Control": "no-store"
         });
@@ -298,4 +332,5 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
 exports.createHandler = createHandler;
 exports.bookingHasHistory = bookingHasHistory;
 exports.isoDateTimeInEventZone = isoDateTimeInEventZone;
+exports.localDateForState = localDateForState;
 exports.handler = createHandler();

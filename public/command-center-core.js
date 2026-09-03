@@ -27,6 +27,23 @@
     return start >= beginning && start <= ending;
   }
 
+  function withinPastDays(event, days, now = new Date()) {
+    const start = dateValue(event);
+    if (!start) return false;
+    const ending = new Date(now);
+    ending.setHours(0, 0, 0, 0);
+    const beginning = new Date(ending);
+    beginning.setDate(beginning.getDate() - Number(days));
+    return start >= beginning && start < ending;
+  }
+
+  function pastOperationalStatus(event) {
+    if (Number(event?.historyLockedBookingCount || 0) > 0 || event?.hasHistoricalActivity) {
+      return { key: "locked", label: "History protected" };
+    }
+    return { key: "editable", label: "Editable" };
+  }
+
   function searchText(event) {
     return [
       event?.name,
@@ -40,11 +57,12 @@
 
   function filterEvents(events, filters = {}, now = new Date()) {
     const period = String(filters.period || "all");
+    const view = String(filters.view || "upcoming");
     const region = String(filters.region || "all");
     const brand = String(filters.brand || "all");
     const search = String(filters.search || "").trim().toLowerCase();
     return (events || []).filter((event) => {
-      if (period !== "all" && !withinDays(event, Number(period), now)) return false;
+      if (period !== "all" && !(view === "past" ? withinPastDays(event, Number(period), now) : withinDays(event, Number(period), now))) return false;
       if (region !== "all" && String(event.eventArea || event.state || "") !== region) return false;
       if (brand !== "all" && String(event.brand || "") !== brand) return false;
       if (search && !searchText(event).includes(search)) return false;
@@ -97,5 +115,5 @@
     return payload;
   }
 
-  return { dateValue, operationalStatus, withinDays, filterEvents, payrollTotal, relevantUnconfirmedBookings, metrics, editPayload };
+  return { dateValue, operationalStatus, pastOperationalStatus, withinDays, withinPastDays, filterEvents, payrollTotal, relevantUnconfirmedBookings, metrics, editPayload };
 });
