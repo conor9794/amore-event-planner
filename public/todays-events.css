@@ -67,6 +67,10 @@
   border-color: #ef4444;
 }
 
+.todayCount.unconfirmed {
+  border-color: #f59e0b;
+}
+
 .todayCount.checked-in {
   border-color: #22c55e;
 }
@@ -85,6 +89,7 @@
 }
 
 .todayEvent.upcoming { border-left-color: #64748b; }
+.todayEvent.unconfirmed { border-left-color: #f59e0b; }
 .todayEvent.checked-in { border-left-color: #22c55e; }
 .todayEvent.late { border-left-color: #ef4444; }
 .todayEvent.completed { border-left-color: #3b82f6; }
@@ -126,6 +131,7 @@
 }
 
 .todayBadge.upcoming { background: #e2e8f0; color: #334155; }
+.todayBadge.unconfirmed { background: #fef3c7; color: #92400e; }
 .todayBadge.checked-in { background: #dcfce7; color: #166534; }
 .todayBadge.late { background: #fee2e2; color: #991b1b; }
 .todayBadge.completed { background: #dbeafe; color: #1e40af; }
@@ -167,7 +173,7 @@
 
 @media (min-width: 520px) {
   .todayCounts {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .todayEventGrid {
