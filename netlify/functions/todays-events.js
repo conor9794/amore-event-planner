@@ -102,13 +102,16 @@ function localTimeLabel(value, timeZone) {
   }).format(date);
 }
 
-function statusFor(fields, scheduledStart, now) {
+const LATE_THRESHOLD_MS = 5 * 60 * 1000;
+
+function statusFor(fields, scheduledStart, now, bookingConfirmed = true) {
   const clockOut = value(fields, ["Clock Out Timestamp"]);
   const clockIn = value(fields, ["Clock In Timestamp"]);
   if (clockOut) return "completed";
   if (clockIn) return "checked-in";
+  if (!bookingConfirmed) return "unconfirmed";
   const start = new Date(scheduledStart);
-  if (!Number.isNaN(start.getTime()) && now.getTime() >= start.getTime()) return "late";
+  if (!Number.isNaN(start.getTime()) && now.getTime() >= start.getTime() - LATE_THRESHOLD_MS) return "late";
   return "upcoming";
 }
 
@@ -125,7 +128,7 @@ exports.handler = async (event) => {
     const bookings = await listRecords(TABLES.BOOKINGS, { maxRecords: "1000" });
     const eligible = bookings.filter((record) => {
       const fields = record.fields || {};
-      return Boolean(fields["Booking Confirmed"]) && !Boolean(fields.Paid);
+      return linkedIds(fields.Event).length > 0 && linkedIds(fields.Ambassador).length > 0 && !Boolean(fields.Paid);
     });
 
     const eventIds = eligible.flatMap((record) => linkedIds(record.fields?.Event));
@@ -164,7 +167,8 @@ exports.handler = async (event) => {
       const eventName = text(eventFields, ["Event Name", "Name", "Event", "Title"]) || fields.Assignment || "Untitled Event";
       const storeName = text(storeFields, ["Store Name", "Name"]) || text(eventFields, ["Store Name", "Account Name"]);
       const brandName = text(brandFields, ["Brand Name", "Name"]) || text(eventFields, ["Brand Name"]);
-      const status = statusFor(fields, scheduledStart, now);
+      const bookingConfirmed = Boolean(fields["Booking Confirmed"]);
+      const status = statusFor(fields, scheduledStart, now, bookingConfirmed);
 
       return {
         bookingId: booking.id,
@@ -173,6 +177,7 @@ exports.handler = async (event) => {
         storeName,
         ambassadorName: text(ambassadorFields, ["Ambassador Name", "Full Name", "Name"]) || "Unassigned",
         ambassadorEmail: first(value(fields, ["Ambassadors Email", "Ambassador Email"])),
+        bookingConfirmed,
         scheduledStart,
         scheduledEnd,
         scheduledLabel: `${localTimeLabel(scheduledStart, timeZone)} – ${localTimeLabel(scheduledEnd, timeZone)}`,
@@ -189,7 +194,7 @@ exports.handler = async (event) => {
       totals.total += 1;
       totals[item.status] += 1;
       return totals;
-    }, { total: 0, upcoming: 0, "checked-in": 0, late: 0, completed: 0 });
+    }, { total: 0, unconfirmed: 0, upcoming: 0, "checked-in": 0, late: 0, completed: 0 });
 
     return json(200, { generatedAt: now.toISOString(), selectedDate, counts, events: items });
   } catch (error) {
@@ -197,3 +202,6 @@ exports.handler = async (event) => {
     return json(500, { error: error.message || "Could not load events." });
   }
 };
+
+exports.statusFor = statusFor;
+exports.LATE_THRESHOLD_MS = LATE_THRESHOLD_MS;
