@@ -610,10 +610,16 @@ async function handleEventChange() {
       </div>
       <p class="boxHint">If the end time is earlier than the start time, the event ends the next day.</p>
       <button type="button" id="saveEventScheduleBtn" class="secondary">Save Date & Times</button>
+      <div class="mobileCancelSection">
+        <strong>Cancel this event</strong>
+        <p>Remove it from active and rep views while preserving its record and completed history.</p>
+        <button type="button" id="cancelManagedEventBtn" class="mobileCancelButton">Cancel Event</button>
+      </div>
     </div>
   `;
   $("eventDetails").className = "detailBox";
   $("saveEventScheduleBtn")?.addEventListener("click", saveEventSchedule);
+  $("cancelManagedEventBtn")?.addEventListener("click", cancelManagedEvent);
   ["manageEventDate", "manageStartTime", "manageEndTime"].forEach((id) => {
     $(id)?.addEventListener("input", () => {
       document.querySelector(".scheduleEditor")?.setAttribute("data-dirty", "true");
@@ -628,6 +634,55 @@ async function handleEventChange() {
     loadBookingsForEvent(eventId),
     loadInterestsForEvent(eventId)
   ]);
+}
+
+async function cancelManagedEvent() {
+  const eventId = selectedEventId || $("assignEvent").value;
+  const event = plannerEvents.find((item) => item.id === eventId);
+  if (!eventId || !event) return showAssignMessage("Select an event.", "error");
+
+  const bookingCount = Number(event.bookingCount || 0);
+  const warning = bookingCount
+    ? `Cancel "${event.name}"? It has ${bookingCount} ${bookingCount === 1 ? "booking" : "bookings"}. Future reminders and rep access will stop, but the event and completed history will be preserved.`
+    : `Cancel "${event.name}"? It will be removed from active and rep views, but its Airtable record will be preserved.`;
+  if (!window.confirm(warning)) return;
+
+  const button = $("cancelManagedEventBtn");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Cancelling…";
+  }
+  showAssignMessage("Cancelling event…", "ok");
+
+  try {
+    const res = await fetch("/api/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId, cancel: true })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Could not cancel the event.");
+
+    plannerEvents = plannerEvents.filter((item) => item.id !== eventId);
+    selectedEventId = "";
+    $("assignEvent").value = "";
+    $("eventSearch").value = "";
+    resetEventDependentBoxes();
+    renderSelectedEvent();
+    renderEventOptions();
+
+    const preserved = Number(data.bookingsPreserved || 0);
+    showAssignMessage(preserved
+      ? `Event cancelled. ${preserved} historical ${preserved === 1 ? "booking was" : "bookings were"} preserved.`
+      : "Event cancelled successfully.", "ok");
+  } catch (err) {
+    showAssignMessage(err.message, "error");
+    const currentButton = $("cancelManagedEventBtn");
+    if (currentButton) {
+      currentButton.disabled = false;
+      currentButton.textContent = "Cancel Event";
+    }
+  }
 }
 
 async function saveEventSchedule() {

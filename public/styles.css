@@ -388,3 +388,29 @@ button:disabled {
   color: var(--text);
   font-size: 13px;
 }
+
+.mobileCancelSection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.mobileCancelSection strong {
+  color: var(--text);
+}
+
+.mobileCancelSection p {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.scheduleEditor .mobileCancelButton {
+  border: 1px solid var(--red2);
+  background: transparent;
+  color: var(--red2);
+}
+
+.scheduleEditor .mobileCancelButton:hover {
+  background: var(--red2);
+  color: white;
+}

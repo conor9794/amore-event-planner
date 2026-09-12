@@ -117,3 +117,14 @@ test("desktop event editor exposes a confirmed cancel-event action", async () =>
   assert.match(js, /body: JSON\.stringify\(\{ eventId: event\.id, cancel: true \}\)/);
   assert.match(css, /\.commandDangerButton/);
 });
+
+test("mobile event management exposes the protected cancellation flow", async () => {
+  const js = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+  assert.match(js, /id="cancelManagedEventBtn"/);
+  assert.match(js, /addEventListener\("click", cancelManagedEvent\)/);
+  assert.match(js, /body: JSON\.stringify\(\{ eventId, cancel: true \}\)/);
+  assert.match(js, /window\.confirm\(warning\)/);
+  assert.match(css, /\.mobileCancelSection/);
+  assert.match(css, /\.mobileCancelButton/);
+});
