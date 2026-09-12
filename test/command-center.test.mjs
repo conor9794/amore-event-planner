@@ -108,3 +108,12 @@ test("desktop markup has unique ids, both dashboard scripts, and only two workfl
   const css = await readFile(new URL("../public/command-center.css", import.meta.url), "utf8");
   assert.match(css, /\.desktopOnly[\s\S]*display:\s*none/);
 });
+
+test("desktop event editor exposes a confirmed cancel-event action", async () => {
+  const js = await readFile(new URL("../public/command-center.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/command-center.css", import.meta.url), "utf8");
+  assert.match(js, /data-cancel-event/);
+  assert.match(js, /window\.confirm\(warning\)/);
+  assert.match(js, /body: JSON\.stringify\(\{ eventId: event\.id, cancel: true \}\)/);
+  assert.match(css, /\.commandDangerButton/);
+});

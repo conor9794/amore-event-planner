@@ -122,6 +122,10 @@ function checkboxValue(input) {
   return input === true || input === 1 || input === "1" || String(input || "").toLowerCase() === "true";
 }
 
+function eventIsCancelled(fields) {
+  return String(fields?.Status || "").trim().toLowerCase() === "cancelled";
+}
+
 function isValidDateInput(input) {
   const match = String(input || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return false;
@@ -212,6 +216,7 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         ambassadorNames: bookings.map((booking) => booking.ambassadorName).filter(Boolean)
       };
     }).filter((event) => {
+      if (String(event.status || "").trim().toLowerCase() === "cancelled") return false;
       if (!event.eventDate || !event.startTime || !event.endTime) return false;
       const eventDate = String(event.eventDate).slice(0, 10);
       const today = localDateForState(now, event.state);
@@ -229,6 +234,40 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         return aPast ? dateSortValue(b) - dateSortValue(a) : dateSortValue(a) - dateSortValue(b);
       }
       return dateSortValue(a) - dateSortValue(b);
+    });
+  }
+
+  async function cancelEvent(body) {
+    const { eventId } = body;
+    if (!isAirtableRecordId(eventId)) return json(400, { error: "Select a valid event." });
+
+    const eventRecord = await api.airtableRequest(`${encodeURIComponent(api.TABLES.EVENTS)}/${eventId}`);
+    if (eventIsCancelled(eventRecord.fields || {})) {
+      return json(200, { eventId, alreadyCancelled: true, bookingsCancelled: 0, bookingsPreserved: 0 });
+    }
+
+    const bookings = await api.listRecords(api.TABLES.BOOKINGS, { maxRecords: "1000" });
+    const linkedBookings = bookings.filter((record) => linkedIds(record.fields?.Event).includes(eventId));
+    const activeBookings = linkedBookings.filter((record) => !bookingHasHistory(record.fields || {}));
+    const preservedBookings = linkedBookings.length - activeBookings.length;
+
+    await api.updateRecord(api.TABLES.EVENTS, eventId, {
+      Status: "Cancelled",
+      "Portal Visible": false
+    });
+
+    await Promise.all(activeBookings.map((record) => api.updateRecord(api.TABLES.BOOKINGS, record.id, {
+      "Booking Confirmed": false,
+      "Booking Confirmed Email Sent": false,
+      "Pay Rate Snapshot": null,
+      "Send Save the Date": false,
+      "Save the Date Sent": false
+    })));
+
+    return json(200, {
+      eventId,
+      bookingsCancelled: activeBookings.length,
+      bookingsPreserved: preservedBookings
     });
   }
 
@@ -333,6 +372,10 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
         } catch (_error) {
           return json(400, { error: "Invalid JSON body." });
         }
+        if (Object.prototype.hasOwnProperty.call(body, "cancel")) {
+          if (body.cancel !== true) return json(400, { error: "Cancel must be true." });
+          return cancelEvent(body);
+        }
         return updateEventSchedule(body);
       }
       return json(405, { error: "Method not allowed." });
@@ -344,6 +387,7 @@ function createHandler(api = { TABLES, airtableRequest, listRecords, updateRecor
 
 exports.createHandler = createHandler;
 exports.bookingHasHistory = bookingHasHistory;
+exports.eventIsCancelled = eventIsCancelled;
 exports.isoDateTimeInEventZone = isoDateTimeInEventZone;
 exports.localDateForState = localDateForState;
 exports.handler = createHandler();

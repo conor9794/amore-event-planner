@@ -292,3 +292,83 @@ test("desktop edit validates visibility and rejects empty changes", async () => 
   assert.equal(empty.statusCode, 400);
   assert.match(JSON.parse(empty.body).error, /No event changes/);
 });
+
+test("cancelling an event hides it and disables future booking automation while preserving history", async () => {
+  const updates = [];
+  const handler = createHandler({
+    TABLES,
+    airtableRequest: async (path) => {
+      assert.equal(path, "Events/recABCDEFGHIJKLMN");
+      return { id: "recABCDEFGHIJKLMN", fields: { Status: "Scheduled" } };
+    },
+    listRecords: async (table) => {
+      assert.equal(table, "Bookings");
+      return [
+        { id: "recACTIVEABCDEFG", fields: { Event: ["recABCDEFGHIJKLMN"], "Booking Confirmed": true, "Pay Rate Snapshot": 30 } },
+        { id: "recLOCKEDABCDEFG", fields: { Event: ["recABCDEFGHIJKLMN"], "Ready for Payroll": true } },
+        { id: "recOTHERABCDEFGHI", fields: { Event: ["recOTHERABCDEFGHIJ"], "Booking Confirmed": true } }
+      ];
+    },
+    updateRecord: async (table, id, fields) => {
+      updates.push({ table, id, fields });
+      return { id, fields };
+    }
+  });
+
+  const response = await handler({
+    httpMethod: "PATCH",
+    body: JSON.stringify({ eventId: "recABCDEFGHIJKLMN", cancel: true })
+  });
+  const body = JSON.parse(response.body);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.bookingsCancelled, 1);
+  assert.equal(body.bookingsPreserved, 1);
+  assert.deepEqual(updates, [
+    {
+      table: "Events",
+      id: "recABCDEFGHIJKLMN",
+      fields: { Status: "Cancelled", "Portal Visible": false }
+    },
+    {
+      table: "Bookings",
+      id: "recACTIVEABCDEFG",
+      fields: {
+        "Booking Confirmed": false,
+        "Booking Confirmed Email Sent": false,
+        "Pay Rate Snapshot": null,
+        "Send Save the Date": false,
+        "Save the Date Sent": false
+      }
+    }
+  ]);
+});
+
+test("cancelled events are excluded from every planner view", async () => {
+  const handler = createHandler({
+    TABLES,
+    now: () => new Date("2026-09-12T12:00:00Z"),
+    listRecords: async (table) => {
+      if (table === TABLES.EVENTS) return [
+        { id: "scheduled", fields: { "Event Name": "Scheduled", "Event Date": "2099-09-12", "Start Time": "2099-09-12T18:00:00Z", "End Time": "2099-09-12T20:00:00Z", Status: "Scheduled" } },
+        { id: "cancelled", fields: { "Event Name": "Cancelled", "Event Date": "2099-09-13", "Start Time": "2099-09-13T18:00:00Z", "End Time": "2099-09-13T20:00:00Z", Status: "Cancelled" } }
+      ];
+      return [];
+    }
+  });
+
+  const upcoming = JSON.parse((await handler({ httpMethod: "GET" })).body).events;
+  const all = JSON.parse((await handler({ httpMethod: "GET", queryStringParameters: { view: "all" } })).body).events;
+  assert.deepEqual(upcoming.map((event) => event.id), ["scheduled"]);
+  assert.deepEqual(all.map((event) => event.id), ["scheduled"]);
+});
+
+test("cancel request requires an explicit true value", async () => {
+  const handler = createHandler({ TABLES });
+  const response = await handler({
+    httpMethod: "PATCH",
+    body: JSON.stringify({ eventId: "recABCDEFGHIJKLMN", cancel: false })
+  });
+  assert.equal(response.statusCode, 400);
+  assert.match(JSON.parse(response.body).error, /must be true/i);
+});

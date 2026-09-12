@@ -488,3 +488,40 @@ body.desktop-mode .desktopOnly.page.active {
     grid-template-columns: 1fr;
   }
 }
+
+.commandDangerZone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--red2) 35%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red2) 7%, var(--white));
+}
+
+.commandDangerZone strong,
+.commandDangerZone small {
+  display: block;
+}
+
+.commandDangerZone small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.commandDangerButton {
+  width: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--red2);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--red2);
+  font-weight: 800;
+}
+
+.commandDangerButton:hover {
+  background: var(--red2);
+  color: white;
+}

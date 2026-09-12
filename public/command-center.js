@@ -229,6 +229,7 @@
         <button type="button" class="primary" data-edit-event="${escapeHtml(event.id)}">Edit event</button>
         <button type="button" class="secondary" data-manage-event="${escapeHtml(event.id)}">Manage staff</button>
         ${!past && status.key === "unconfirmed" ? `<button type="button" class="secondary" data-confirm-event>Confirm booking</button>` : ""}
+        ${!past ? `<button type="button" class="commandDangerButton" data-cancel-event="${escapeHtml(event.id)}">Cancel event</button>` : ""}
       </div>`;
   }
 
@@ -253,10 +254,12 @@
         </div>
         <label>Details / notes<textarea id="commandEditDetails" rows="4">${escapeHtml(event.details || "")}</textarea></label>
         <label class="commandSwitchRow"><span><strong>Visible in rep portal</strong><small>${past ? "Past events stay hidden from the rep portal." : "Allow ambassadors to see and apply for this event."}</small></span><input id="commandEditPortal" type="checkbox" ${!past && event.portalVisible ? "checked" : ""} ${past ? "disabled" : ""}></label>
-        <div class="commandDetailActions"><button type="button" class="secondary" id="commandCancelEdit">Cancel</button><button type="submit" class="primary" id="commandSaveEdit">Save changes</button></div>
+        ${!past ? `<div class="commandDangerZone"><div><strong>Cancel this event</strong><small>Removes it from active and rep views while preserving its record and completed history.</small></div><button type="button" class="commandDangerButton" id="commandCancelEvent">Cancel event</button></div>` : ""}
+        <div class="commandDetailActions"><button type="button" class="secondary" id="commandCancelEdit">Back</button><button type="submit" class="primary" id="commandSaveEdit">Save changes</button></div>
       </form>`;
     $("commandEditForm").addEventListener("submit", saveEvent);
     $("commandCancelEdit").addEventListener("click", renderDetail);
+    $("commandCancelEvent")?.addEventListener("click", cancelSelectedEvent);
   }
 
   async function saveEvent(submitEvent) {
@@ -293,6 +296,45 @@
       showMessage(error.message, "error");
       saveButton.disabled = false;
       saveButton.textContent = "Save changes";
+    }
+  }
+
+  async function cancelSelectedEvent() {
+    const event = selectedEvent();
+    if (!event) return;
+    const bookingCount = Number(event.bookingCount || 0);
+    const warning = bookingCount
+      ? `Cancel "${event.name}"? It has ${bookingCount} ${bookingCount === 1 ? "booking" : "bookings"}. Future reminders and rep access will stop, but the event and completed history will be preserved.`
+      : `Cancel "${event.name}"? It will be removed from active and rep views, but its Airtable record will be preserved.`;
+    if (!window.confirm(warning)) return;
+
+    const button = $("commandCancelEvent") || document.querySelector("[data-cancel-event]");
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Cancelling…";
+    }
+    hideMessage();
+
+    try {
+      const response = await fetch("/api/events", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id, cancel: true })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Could not cancel the event.");
+      state.selectedEventId = "";
+      await loadDashboard({ preserveMessage: true, throwOnError: true });
+      const preserved = Number(result.bookingsPreserved || 0);
+      showMessage(preserved
+        ? `Event cancelled. ${preserved} historical ${preserved === 1 ? "booking was" : "bookings were"} preserved.`
+        : "Event cancelled successfully.", "ok");
+    } catch (error) {
+      showMessage(error.message, "error");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Cancel event";
+      }
     }
   }
 
@@ -407,6 +449,7 @@
   $("commandEventDetail").addEventListener("click", (clickEvent) => {
     const editButton = clickEvent.target.closest("[data-edit-event]");
     if (editButton) renderEditForm(selectedEvent());
+    if (clickEvent.target.closest("[data-cancel-event]")) cancelSelectedEvent();
     const manageButton = clickEvent.target.closest("[data-manage-event]");
     if (manageButton) {
       if (typeof window.openEventInStaffing === "function") window.openEventInStaffing(manageButton.dataset.manageEvent);
