@@ -1,4 +1,5 @@
 const { TABLES, listRecords } = require("./_airtable");
+const { parseCoordinatesFromMapLink, locationReview } = require("./_geo");
 
 function json(statusCode, body) {
   return {
@@ -169,6 +170,13 @@ exports.handler = async (event) => {
       const brandName = text(brandFields, ["Brand Name", "Name"]) || text(eventFields, ["Brand Name"]);
       const bookingConfirmed = Boolean(fields["Booking Confirmed"]);
       const status = statusFor(fields, scheduledStart, now, bookingConfirmed);
+      const clockInCoordinates = parseCoordinatesFromMapLink(value(fields, ["Clock In GPS Link"]));
+      const clockInLocation = locationReview({
+        storeLatitude: value(storeFields, ["Latitude"]),
+        storeLongitude: value(storeFields, ["Longitude"]),
+        submittedLatitude: clockInCoordinates?.latitude,
+        submittedLongitude: clockInCoordinates?.longitude
+      });
 
       return {
         bookingId: booking.id,
@@ -185,6 +193,7 @@ exports.handler = async (event) => {
         clockOut: value(fields, ["Clock Out Timestamp"]) || null,
         clockInLabel: localTimeLabel(value(fields, ["Clock In Timestamp"]), timeZone),
         clockOutLabel: localTimeLabel(value(fields, ["Clock Out Timestamp"]), timeZone),
+        clockInLocation,
         timeZone,
         status
       };
