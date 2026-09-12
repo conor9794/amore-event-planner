@@ -1,4 +1,5 @@
 const { TABLES, airtableRequest, listRecords, updateRecord } = require("./_airtable");
+const { locationReview } = require("./_geo");
 
 const TIME_ENTRY_TABLE = process.env.AIRTABLE_TIME_ENTRY_TABLE || "Time Entry";
 
@@ -95,6 +96,26 @@ function latestClockOut(entries) {
     })[0] || null;
 }
 
+function latestEntry(entries, entryType) {
+  return entries
+    .filter((entry) => entry.fields?.["Entry Type"] === entryType)
+    .sort((a, b) => {
+      const aTime = new Date(value(a.fields, ["Effective Timestamp", "Submitted At"]) || 0).getTime();
+      const bTime = new Date(value(b.fields, ["Effective Timestamp", "Submitted At"]) || 0).getTime();
+      return bTime - aTime;
+    })[0] || null;
+}
+
+function entryLocationReview(entryFields, storeFields) {
+  return locationReview({
+    storeLatitude: value(storeFields, ["Latitude"]),
+    storeLongitude: value(storeFields, ["Longitude"]),
+    submittedLatitude: value(entryFields, ["Geo Lat"]),
+    submittedLongitude: value(entryFields, ["Geo Lng"]),
+    accuracyMeters: value(entryFields, ["Geo Accuracy M"])
+  });
+}
+
 async function listRecaps() {
   const bookings = await listRecords(TABLES.BOOKINGS, {
     filterByFormula: "AND({Recap Submitted Timestamp},NOT({Recap Approved}),NOT({Paid}))",
@@ -109,16 +130,19 @@ async function listRecaps() {
 
   const events = await recordsByIds(TABLES.EVENTS, eventIds);
   const brandIds = events.flatMap((record) => linkedIds(value(record.fields, ["Brand"])));
+  const storeIds = events.flatMap((record) => linkedIds(value(record.fields, ["Store"])));
 
-  const [brands, ambassadors, timeEntries] = await Promise.all([
+  const [brands, ambassadors, timeEntries, stores] = await Promise.all([
     recordsByIds(TABLES.BRANDS, brandIds),
     recordsByIds(TABLES.AMBASSADORS, ambassadorIds),
-    recordsByIds(TIME_ENTRY_TABLE, timeEntryIds)
+    recordsByIds(TIME_ENTRY_TABLE, timeEntryIds),
+    recordsByIds(TABLES.STORES, storeIds)
   ]);
 
   const eventById = Object.fromEntries(events.map((record) => [record.id, record.fields || {}]));
   const brandById = Object.fromEntries(brands.map((record) => [record.id, text(record.fields, ["Brand Name", "Name"]) ]));
   const ambassadorById = Object.fromEntries(ambassadors.map((record) => [record.id, record.fields || {}]));
+  const storeById = Object.fromEntries(stores.map((record) => [record.id, record.fields || {}]));
   const entriesByBookingId = {};
 
   timeEntries.forEach((entry) => {
@@ -132,7 +156,10 @@ async function listRecaps() {
     const fields = booking.fields || {};
     const eventFields = eventById[linkedIds(fields.Event)[0]] || {};
     const ambassadorFields = ambassadorById[linkedIds(fields.Ambassador)[0]] || {};
-    const recapFields = latestClockOut(entriesByBookingId[booking.id] || [])?.fields || {};
+    const bookingEntries = entriesByBookingId[booking.id] || [];
+    const clockInFields = latestEntry(bookingEntries, "Clock In")?.fields || {};
+    const recapFields = latestClockOut(bookingEntries)?.fields || {};
+    const storeFields = storeById[linkedIds(value(eventFields, ["Store"]))[0]] || {};
 
     const scheduledStart = value(fields, ["Scheduled Start Snapshot", "Event Start Time", "Event Start Time (lookup)"]) || null;
     const scheduledEnd = value(fields, ["Scheduled End Snapshot", "Event End Time", "Event End Time (lookup)"]) || null;
@@ -177,6 +204,10 @@ async function listRecaps() {
         clockIn: value(fields, ["Clock In Timestamp"]) || null,
         clockOut: value(fields, ["Clock Out Timestamp"]) || null,
         actualHours: numberOrNull(fields["Actual Hours Worked"])
+      },
+      location: {
+        clockIn: entryLocationReview(clockInFields, storeFields),
+        clockOut: entryLocationReview(recapFields, storeFields)
       },
       recap: {
         submittedAt: value(fields, ["Recap Submitted Timestamp"]) || value(recapFields, ["Effective Timestamp", "Submitted At"]) || null,
