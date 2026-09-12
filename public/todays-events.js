@@ -220,6 +220,7 @@ function renderTodayEvent(event) {
         <div><span>Scheduled</span><strong>${todayEscape(event.scheduledLabel || "—")}</strong></div>
         <div><span>Ambassador</span><strong>${todayEscape(event.ambassadorName || "Unassigned")}</strong></div>
         <div><span>Attendance</span><strong>${todayEscape(attendance)}</strong></div>
+        <div><span>Clock-In Location</span><strong>${todayEscape(event.clockInLocation?.label || "Location unavailable")}</strong></div>
         <div><span>Time Zone</span><strong>${todayEscape(event.timeZone || "America/New_York")}</strong></div>
       </div>
     </article>
