@@ -1,5 +1,6 @@
 const { TABLES, airtableRequest, listRecords, updateRecord } = require("./_airtable");
 const { locationReview } = require("./_geo");
+const { recapRequirements } = require("./_recap-requirements");
 
 const TIME_ENTRY_TABLE = process.env.AIRTABLE_TIME_ENTRY_TABLE || "Time Entry";
 
@@ -184,6 +185,10 @@ async function listRecaps() {
       ["Iced Tea Lemonade", recapFields["Talkhouse - Iced Tea Lemonade 4-Packs Sold"]],
       ["Variety Packs", recapFields["Talkhouse - Variety Packs Sold"]]
     ].filter(([, item]) => item !== undefined && item !== null && item !== "");
+    const clockInPhotos = attachments(value(clockInFields, ["Clock In Photo"]) || fields["Clock In Photo"]);
+    const consumersSeen = numberOrNull(value(recapFields, ["Consumers Seen"]));
+    const consumersSampled = numberOrNull(value(recapFields, ["Consumers Sampled"]));
+    const requirements = recapRequirements({ clockInPhotos, consumersSeen, consumersSampled });
 
     return {
       bookingId: booking.id,
@@ -209,14 +214,15 @@ async function listRecaps() {
         clockIn: entryLocationReview(clockInFields, storeFields),
         clockOut: entryLocationReview(recapFields, storeFields)
       },
+      requirements,
       recap: {
         submittedAt: value(fields, ["Recap Submitted Timestamp"]) || value(recapFields, ["Effective Timestamp", "Submitted At"]) || null,
         notes: text(recapFields, ["Recap Notes"]) || text(fields, ["Recap Notes"]),
         feedback: text(recapFields, ["Event Feedback"]),
         photos: attachments(value(recapFields, ["Event Photos", "Recap Photos"]) || fields["Recap Photos"]),
         productsSampled: text(recapFields, ["Products Sampled.", "Products Sampled"]),
-        consumersSeen: numberOrNull(value(recapFields, ["Consumers Seen"])),
-        consumersSampled: numberOrNull(value(recapFields, ["Consumers Sampled"])),
+        consumersSeen,
+        consumersSampled,
         productPrice: text(recapFields, ["Product Price"]),
         productSold: text(recapFields, ["Product Sold"]),
         tableLocation: text(recapFields, ["Table Location"]),
@@ -233,6 +239,7 @@ async function listRecaps() {
         amount: numberOrNull(value(recapFields, ["Expense Amount"]) || fields["Expense Amount"]),
         receipts: attachments(value(recapFields, ["Expense Receipt"]) || fields["Expense Receipt"])
       },
+      clockInPhotos,
       payroll: {
         payRate,
         scheduledHours: hours,
@@ -260,6 +267,18 @@ async function approveRecap(event) {
   if (!fields["Recap Submitted Timestamp"]) return json(409, { error: "This booking has no submitted recap yet." });
   if (fields["Recap Approved"]) return json(409, { error: "This recap has already been approved." });
   if (fields.Paid) return json(409, { error: "This booking has already been paid." });
+
+  const timeEntries = await recordsByIds(TIME_ENTRY_TABLE, linkedIds(fields["Time Entry"]));
+  const clockInFields = latestEntry(timeEntries, "Clock In")?.fields || {};
+  const recapFields = latestClockOut(timeEntries)?.fields || {};
+  const requirements = recapRequirements({
+    clockInPhotos: attachments(value(clockInFields, ["Clock In Photo"]) || fields["Clock In Photo"]),
+    consumersSeen: numberOrNull(value(recapFields, ["Consumers Seen"])),
+    consumersSampled: numberOrNull(value(recapFields, ["Consumers Sampled"]))
+  });
+  if (!requirements.complete) {
+    return json(409, { error: `Cannot approve yet. Missing: ${requirements.missing.join(", ")}.`, requirements });
+  }
 
   await updateRecord(TABLES.BOOKINGS, bookingId, { "Recap Approved": true });
   return json(200, { success: true, bookingId });
