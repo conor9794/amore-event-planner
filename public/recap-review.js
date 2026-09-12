@@ -169,6 +169,8 @@ function renderRecapCard(recap) {
             ${detailRow("Scheduled", `${recapTime(recap.time?.scheduledStart)} – ${recapTime(recap.time?.scheduledEnd)}`)}
             ${detailRow("Clock In", recapTime(recap.time?.clockIn))}
             ${detailRow("Clock Out", recapTime(recap.time?.clockOut))}
+            ${detailRow("Clock-In Location", recap.location?.clockIn?.label)}
+            ${detailRow("Clock-Out Location", recap.location?.clockOut?.label)}
             ${detailRow("Actual Hours", recapNumber(recap.time?.actualHours))}
           </section>
 
