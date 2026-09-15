@@ -60,6 +60,7 @@ function updateDateInUrl() {
 
 function todayStatusLabel(status) {
   return {
+    unconfirmed: "Assigned — Confirm Booking",
     upcoming: "Upcoming",
     "checked-in": "Checked In",
     late: "Late / Not Checked In",
@@ -68,7 +69,7 @@ function todayStatusLabel(status) {
 }
 
 function todayStatusOrder(status) {
-  return { late: 0, "checked-in": 1, upcoming: 2, completed: 3 }[status] ?? 4;
+  return { late: 0, unconfirmed: 1, "checked-in": 2, upcoming: 3, completed: 4 }[status] ?? 5;
 }
 
 function showTodayMessage(text, type = "ok") {
@@ -143,8 +144,8 @@ function updateSelectedDateDisplay() {
 
   if (heading) heading.textContent = isActualToday() ? "Today's Events" : `Events for ${formatSelectedDate(selectedEventsDate)}`;
   if (description) description.textContent = isActualToday()
-    ? "See every confirmed event happening today in its store's local timezone and quickly identify who is checked in, late, upcoming, or completed."
-    : `Preview confirmed bookings scheduled for ${formatSelectedDate(selectedEventsDate)} in each store's local timezone.`;
+    ? "See assigned events in each store's local timezone, including bookings that still need confirmation. Late status begins five minutes before start."
+    : `Preview assigned bookings scheduled for ${formatSelectedDate(selectedEventsDate)} in each store's local timezone.`;
   if (searchLabel) searchLabel.childNodes[0].textContent = "Search Events\n            ";
   if (dateLabel) dateLabel.textContent = formatSelectedDate(selectedEventsDate, { short: true, includeYear: true });
   if (datePicker) datePicker.value = selectedEventsDate;
@@ -180,6 +181,7 @@ function renderTodayCounts() {
   if (!container || !todaysEventsCounts) return;
   const cards = [
     ["Total", todaysEventsCounts.total, "total"],
+    ["Need Confirmation", todaysEventsCounts.unconfirmed, "unconfirmed"],
     ["Checked In", todaysEventsCounts["checked-in"], "checked-in"],
     ["Late", todaysEventsCounts.late, "late"],
     ["Upcoming", todaysEventsCounts.upcoming, "upcoming"],
@@ -199,8 +201,10 @@ function renderTodayEvent(event) {
     ? `Clocked in ${event.clockInLabel || ""}`
     : event.status === "completed"
       ? `Clocked out ${event.clockOutLabel || ""}`
+      : event.status === "unconfirmed"
+        ? "Assignment needs confirmation"
       : event.status === "late"
-        ? "Scheduled start has passed"
+        ? "Clock-in missing five minutes before start"
         : `Starts at ${(event.scheduledLabel || "").split(" – ")[0] || ""}`;
 
   return `
@@ -216,6 +220,7 @@ function renderTodayEvent(event) {
         <div><span>Scheduled</span><strong>${todayEscape(event.scheduledLabel || "—")}</strong></div>
         <div><span>Ambassador</span><strong>${todayEscape(event.ambassadorName || "Unassigned")}</strong></div>
         <div><span>Attendance</span><strong>${todayEscape(attendance)}</strong></div>
+        <div><span>Clock-In Location</span><strong>${todayEscape(event.clockInLocation?.label || "Location unavailable")}</strong></div>
         <div><span>Time Zone</span><strong>${todayEscape(event.timeZone || "America/New_York")}</strong></div>
       </div>
     </article>
@@ -244,7 +249,7 @@ function renderTodaysEvents() {
   if (filtered.length === 0) {
     list.innerHTML = "";
     empty.textContent = todaysEvents.length === 0
-      ? `No confirmed events are scheduled for ${formatSelectedDate(selectedEventsDate)}.`
+      ? `No assigned events are scheduled for ${formatSelectedDate(selectedEventsDate)}.`
       : "No events match your filters.";
     empty.className = "todayEmpty";
     return;
@@ -269,7 +274,7 @@ async function loadTodaysEvents() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not load events.");
     todaysEvents = data.events || [];
-    todaysEventsCounts = data.counts || { total: 0, upcoming: 0, "checked-in": 0, late: 0, completed: 0 };
+    todaysEventsCounts = data.counts || { total: 0, unconfirmed: 0, upcoming: 0, "checked-in": 0, late: 0, completed: 0 };
     selectedEventsDate = data.selectedDate || selectedEventsDate;
     todaysEventsLoaded = true;
     updateDateInUrl();

@@ -1,4 +1,6 @@
 const { TABLES, airtableRequest, listRecords, updateRecord } = require("./_airtable");
+const { locationReview } = require("./_geo");
+const { recapRequirements } = require("./_recap-requirements");
 
 const TIME_ENTRY_TABLE = process.env.AIRTABLE_TIME_ENTRY_TABLE || "Time Entry";
 
@@ -95,6 +97,26 @@ function latestClockOut(entries) {
     })[0] || null;
 }
 
+function latestEntry(entries, entryType) {
+  return entries
+    .filter((entry) => entry.fields?.["Entry Type"] === entryType)
+    .sort((a, b) => {
+      const aTime = new Date(value(a.fields, ["Effective Timestamp", "Submitted At"]) || 0).getTime();
+      const bTime = new Date(value(b.fields, ["Effective Timestamp", "Submitted At"]) || 0).getTime();
+      return bTime - aTime;
+    })[0] || null;
+}
+
+function entryLocationReview(entryFields, storeFields) {
+  return locationReview({
+    storeLatitude: value(storeFields, ["Latitude"]),
+    storeLongitude: value(storeFields, ["Longitude"]),
+    submittedLatitude: value(entryFields, ["Geo Lat"]),
+    submittedLongitude: value(entryFields, ["Geo Lng"]),
+    accuracyMeters: value(entryFields, ["Geo Accuracy M"])
+  });
+}
+
 async function listRecaps() {
   const bookings = await listRecords(TABLES.BOOKINGS, {
     filterByFormula: "AND({Recap Submitted Timestamp},NOT({Recap Approved}),NOT({Paid}))",
@@ -109,16 +131,19 @@ async function listRecaps() {
 
   const events = await recordsByIds(TABLES.EVENTS, eventIds);
   const brandIds = events.flatMap((record) => linkedIds(value(record.fields, ["Brand"])));
+  const storeIds = events.flatMap((record) => linkedIds(value(record.fields, ["Store"])));
 
-  const [brands, ambassadors, timeEntries] = await Promise.all([
+  const [brands, ambassadors, timeEntries, stores] = await Promise.all([
     recordsByIds(TABLES.BRANDS, brandIds),
     recordsByIds(TABLES.AMBASSADORS, ambassadorIds),
-    recordsByIds(TIME_ENTRY_TABLE, timeEntryIds)
+    recordsByIds(TIME_ENTRY_TABLE, timeEntryIds),
+    recordsByIds(TABLES.STORES, storeIds)
   ]);
 
   const eventById = Object.fromEntries(events.map((record) => [record.id, record.fields || {}]));
   const brandById = Object.fromEntries(brands.map((record) => [record.id, text(record.fields, ["Brand Name", "Name"]) ]));
   const ambassadorById = Object.fromEntries(ambassadors.map((record) => [record.id, record.fields || {}]));
+  const storeById = Object.fromEntries(stores.map((record) => [record.id, record.fields || {}]));
   const entriesByBookingId = {};
 
   timeEntries.forEach((entry) => {
@@ -132,7 +157,10 @@ async function listRecaps() {
     const fields = booking.fields || {};
     const eventFields = eventById[linkedIds(fields.Event)[0]] || {};
     const ambassadorFields = ambassadorById[linkedIds(fields.Ambassador)[0]] || {};
-    const recapFields = latestClockOut(entriesByBookingId[booking.id] || [])?.fields || {};
+    const bookingEntries = entriesByBookingId[booking.id] || [];
+    const clockInFields = latestEntry(bookingEntries, "Clock In")?.fields || {};
+    const recapFields = latestClockOut(bookingEntries)?.fields || {};
+    const storeFields = storeById[linkedIds(value(eventFields, ["Store"]))[0]] || {};
 
     const scheduledStart = value(fields, ["Scheduled Start Snapshot", "Event Start Time", "Event Start Time (lookup)"]) || null;
     const scheduledEnd = value(fields, ["Scheduled End Snapshot", "Event End Time", "Event End Time (lookup)"]) || null;
@@ -157,6 +185,10 @@ async function listRecaps() {
       ["Iced Tea Lemonade", recapFields["Talkhouse - Iced Tea Lemonade 4-Packs Sold"]],
       ["Variety Packs", recapFields["Talkhouse - Variety Packs Sold"]]
     ].filter(([, item]) => item !== undefined && item !== null && item !== "");
+    const clockInPhotos = attachments(value(clockInFields, ["Clock In Photo"]) || fields["Clock In Photo"]);
+    const consumersSeen = numberOrNull(value(recapFields, ["Consumers Seen"]));
+    const consumersSampled = numberOrNull(value(recapFields, ["Consumers Sampled"]));
+    const requirements = recapRequirements({ clockInPhotos, consumersSeen, consumersSampled });
 
     return {
       bookingId: booking.id,
@@ -178,14 +210,19 @@ async function listRecaps() {
         clockOut: value(fields, ["Clock Out Timestamp"]) || null,
         actualHours: numberOrNull(fields["Actual Hours Worked"])
       },
+      location: {
+        clockIn: entryLocationReview(clockInFields, storeFields),
+        clockOut: entryLocationReview(recapFields, storeFields)
+      },
+      requirements,
       recap: {
         submittedAt: value(fields, ["Recap Submitted Timestamp"]) || value(recapFields, ["Effective Timestamp", "Submitted At"]) || null,
         notes: text(recapFields, ["Recap Notes"]) || text(fields, ["Recap Notes"]),
         feedback: text(recapFields, ["Event Feedback"]),
         photos: attachments(value(recapFields, ["Event Photos", "Recap Photos"]) || fields["Recap Photos"]),
         productsSampled: text(recapFields, ["Products Sampled.", "Products Sampled"]),
-        consumersSeen: numberOrNull(value(recapFields, ["Consumers Seen"])),
-        consumersSampled: numberOrNull(value(recapFields, ["Consumers Sampled"])),
+        consumersSeen,
+        consumersSampled,
         productPrice: text(recapFields, ["Product Price"]),
         productSold: text(recapFields, ["Product Sold"]),
         tableLocation: text(recapFields, ["Table Location"]),
@@ -202,6 +239,7 @@ async function listRecaps() {
         amount: numberOrNull(value(recapFields, ["Expense Amount"]) || fields["Expense Amount"]),
         receipts: attachments(value(recapFields, ["Expense Receipt"]) || fields["Expense Receipt"])
       },
+      clockInPhotos,
       payroll: {
         payRate,
         scheduledHours: hours,
@@ -229,6 +267,18 @@ async function approveRecap(event) {
   if (!fields["Recap Submitted Timestamp"]) return json(409, { error: "This booking has no submitted recap yet." });
   if (fields["Recap Approved"]) return json(409, { error: "This recap has already been approved." });
   if (fields.Paid) return json(409, { error: "This booking has already been paid." });
+
+  const timeEntries = await recordsByIds(TIME_ENTRY_TABLE, linkedIds(fields["Time Entry"]));
+  const clockInFields = latestEntry(timeEntries, "Clock In")?.fields || {};
+  const recapFields = latestClockOut(timeEntries)?.fields || {};
+  const requirements = recapRequirements({
+    clockInPhotos: attachments(value(clockInFields, ["Clock In Photo"]) || fields["Clock In Photo"]),
+    consumersSeen: numberOrNull(value(recapFields, ["Consumers Seen"])),
+    consumersSampled: numberOrNull(value(recapFields, ["Consumers Sampled"]))
+  });
+  if (!requirements.complete) {
+    return json(409, { error: `Cannot approve yet. Missing: ${requirements.missing.join(", ")}.`, requirements });
+  }
 
   await updateRecord(TABLES.BOOKINGS, bookingId, { "Recap Approved": true });
   return json(200, { success: true, bookingId });

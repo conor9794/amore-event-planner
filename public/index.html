@@ -275,7 +275,7 @@
       <section class="card">
         <div class="sectionIntro">
           <h2>Today's Events</h2>
-          <p>See every confirmed event happening today in its store's local timezone and quickly identify who is checked in, late, upcoming, or completed.</p>
+          <p>See every assigned event happening today, including bookings that still need confirmation and clock-ins missing five minutes before start.</p>
         </div>
 
         <div id="todayCounts" class="todayCounts"></div>
@@ -291,6 +291,7 @@
               Status
               <select id="todayStatusFilter">
                 <option value="all">All statuses</option>
+                <option value="unconfirmed">Needs Confirmation</option>
                 <option value="late">Late / Not Checked In</option>
                 <option value="checked-in">Checked In</option>
                 <option value="upcoming">Upcoming</option>

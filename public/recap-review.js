@@ -137,6 +137,8 @@ function renderRecapCard(recap) {
   const approving = approvingRecapId === recap.bookingId;
   const actualHours = recap.time?.actualHours;
   const totalPay = recap.payroll?.totalPay;
+  const requirements = recap.requirements || { complete: true, missing: [] };
+  const missingText = (requirements.missing || []).join(", ");
 
   return `
     <article class="recapCard ${expanded ? "expanded" : ""}">
@@ -169,8 +171,12 @@ function renderRecapCard(recap) {
             ${detailRow("Scheduled", `${recapTime(recap.time?.scheduledStart)} – ${recapTime(recap.time?.scheduledEnd)}`)}
             ${detailRow("Clock In", recapTime(recap.time?.clockIn))}
             ${detailRow("Clock Out", recapTime(recap.time?.clockOut))}
+            ${detailRow("Clock-In Location", recap.location?.clockIn?.label)}
+            ${detailRow("Clock-Out Location", recap.location?.clockOut?.label)}
             ${detailRow("Actual Hours", recapNumber(recap.time?.actualHours))}
           </section>
+
+          ${photoGrid(recap.clockInPhotos, "Clock-In Selfie")}
 
           <section class="recapSection">
             <h3>Recap</h3>
@@ -203,8 +209,10 @@ function renderRecapCard(recap) {
             ${detailRow("Total Pay", recapMoney(recap.payroll?.totalPay))}
           </section>
 
-          <button type="button" class="primary recapApprove" data-recap-approve="${recapEscape(recap.bookingId)}" ${approving ? "disabled" : ""}>
-            ${approving ? "Approving..." : "Approve Recap"}
+          ${requirements.complete ? "" : `<div class="recapRequirements">Cannot approve until the ambassador supplies: ${recapEscape(missingText)}.</div>`}
+
+          <button type="button" class="primary recapApprove" data-recap-approve="${recapEscape(recap.bookingId)}" ${approving || !requirements.complete ? "disabled" : ""}>
+            ${approving ? "Approving..." : requirements.complete ? "Approve Recap" : "Missing Required Information"}
           </button>
         </div>` : ""}
     </article>`;
