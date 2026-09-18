@@ -33,6 +33,8 @@
       <button type="button" id="todayTab" class="tab">Today's Events</button>
       <button type="button" id="recapTab" class="tab">Recap Review</button>
       <button type="button" id="payrollTab" class="tab">Payroll</button>
+      <button type="button" id="ambassadorTab" class="tab">Ambassadors</button>
+
     </nav>
 
     <section id="commandCenterPage" class="page desktopOnly" aria-labelledby="commandCenterHeading">
@@ -183,6 +185,33 @@
             <button type="button" id="publishBtn" class="primary">Publish to Rep Portal</button>
           </div>
         </form>
+      </section>
+    </section>
+
+
+    <section id="ambassadorDirectoryPage" class="page">
+      <section class="card">
+        <div class="sectionIntro">
+          <h2>Ambassadors</h2>
+          <p>Add and maintain the basic ambassador directory without working directly in Airtable.</p>
+        </div>
+        <form id="ambassadorDirectoryForm" class="ambassadorForm">
+          <div class="boxTitle" id="ambassadorDirectoryFormTitle">Add Ambassador</div>
+          <label>Name<input id="ambassadorName" required placeholder="Full name" /></label>
+          <label>Email<input id="ambassadorEmail" type="email" placeholder="name@example.com" /></label>
+          <div class="grid2">
+            <label>State<input id="ambassadorState" placeholder="e.g. NY" /></label>
+            <label>Region<input id="ambassadorRegion" placeholder="e.g. Long Island" /></label>
+          </div>
+          <label>Photo URL<input id="ambassadorPhotoUrl" type="url" placeholder="Optional https:// image link" /></label>
+          <div class="actions">
+            <button type="submit" id="saveAmbassadorBtn" class="primary">Add Ambassador</button>
+            <button type="button" id="cancelAmbassadorEditBtn" class="secondary hidden">Cancel</button>
+          </div>
+        </form>
+        <div id="ambassadorDirectoryMessage" class="message hidden" role="status"></div>
+        <label>Search Ambassadors<input id="ambassadorDirectorySearch" type="search" placeholder="Name, email, state, or region..." /></label>
+        <div id="ambassadorDirectoryList" class="ambassadorDirectoryList"></div>
       </section>
     </section>
 
@@ -365,5 +394,6 @@
   <script src="/payroll.js"></script>
   <script src="/command-center-core.js"></script>
   <script src="/command-center.js"></script>
+  <script src="/ambassador-directory.js"></script>
 </body>
 </html>
