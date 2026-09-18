@@ -414,3 +414,15 @@ button:disabled {
   background: var(--red2);
   color: white;
 }
+
+
+.ambassadorForm { border-bottom: 1px solid var(--border); margin-bottom: 16px; padding-bottom: 6px; }
+.ambassadorDirectoryList { display: grid; gap: 10px; }
+.ambassadorCard { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--border); background: var(--box-bg); border-radius: 14px; padding: 10px; }
+.ambassadorPhoto { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--soft); }
+.ambassadorPhotoPlaceholder { display: grid; place-items: center; color: var(--muted); font-weight: 800; }
+.ambassadorCardBody { min-width: 0; }
+.ambassadorCardBody strong, .ambassadorCardBody span, .ambassadorCardBody small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ambassadorCardBody span, .ambassadorCardBody small, .directoryEmpty { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.ambassadorCardActions { display: grid; gap: 6px; }
+.dangerButton { color: var(--red2); }
