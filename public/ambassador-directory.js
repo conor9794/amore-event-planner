@@ -106,9 +106,8 @@ function renderGalleryCard(ambassador) {
         </div>
         <p class="ambassadorLocation">${esc(location)}</p>
         ${ambassador.email ? `<a class="ambassadorEmail" href="mailto:${esc(ambassador.email)}" onclick="event.stopPropagation()">${esc(ambassador.email)}</a>` : '<span class="ambassadorEmail mutedText">No email</span>'}
-        <div class="ambassadorGalleryStats">
+        <div class="ambassadorGalleryStats ambassadorGalleryStatsSingle">
           <div><strong>${Number(ambassador.bookingCount || 0)}</strong><span>Bookings</span></div>
-          <div><strong>${(ambassador.languages || []).length}</strong><span>Languages</span></div>
         </div>
         <div class="ambassadorCardChips">${operational || chip("Profile", "chipMuted")}</div>
       </div>
