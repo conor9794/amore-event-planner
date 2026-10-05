@@ -1,0 +1,651 @@
+.ambassadorDirectoryCard {
+  overflow: visible;
+}
+
+.ambassadorDirectoryHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.ambassadorDirectoryHeader .sectionIntro {
+  margin: 0;
+}
+
+.ambassadorDirectoryCount {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ambassadorToolbar {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(130px, 1fr)) auto;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.ambassadorToolbar label {
+  margin: 0;
+  font-size: 13px;
+}
+
+.ambassadorToolbar input,
+.ambassadorToolbar select {
+  margin-top: 6px;
+  min-height: 44px;
+}
+
+.ambassadorToolbarButton {
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  background: var(--soft);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.ambassadorViewBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 16px;
+  border-top: 1px solid var(--border);
+}
+
+.ambassadorViewToggle {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.ambassadorViewToggle button {
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ambassadorViewToggle button.active {
+  background: var(--white);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.ambassadorAddDetails {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  background: var(--box-bg);
+}
+
+.ambassadorAddDetails summary {
+  cursor: pointer;
+  padding: 13px 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.ambassadorAddDetails[open] summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.ambassadorAddDetails .ambassadorForm {
+  padding: 16px;
+  margin: 0;
+  border: 0;
+}
+
+.ambassadorGalleryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ambassadorGalleryCard {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--white);
+  box-shadow: 0 6px 20px rgba(15,23,42,.06);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  cursor: pointer;
+}
+
+.ambassadorGalleryCard:hover,
+.ambassadorGalleryCard:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(185,28,28,.35);
+  box-shadow: 0 12px 28px rgba(15,23,42,.11);
+  outline: none;
+}
+
+.ambassadorGalleryPhotoWrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--soft), var(--box-bg));
+}
+
+.ambassadorGalleryPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.ambassadorPhotoPlaceholder.ambassadorGalleryPhoto,
+.ambassadorPhotoPlaceholder.ambassadorProfilePhoto {
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: var(--red2);
+  background: linear-gradient(135deg, var(--soft), var(--box-bg));
+}
+
+.ambassadorPhotoPlaceholder.ambassadorGalleryPhoto {
+  font-size: 52px;
+}
+
+.ambassadorStatusDot {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 14px;
+  height: 14px;
+  border: 3px solid white;
+  border-radius: 999px;
+}
+
+.ambassadorStatusDot.isActive { background: #22c55e; }
+.ambassadorStatusDot.isInactive { background: #94a3b8; }
+
+.ambassadorGalleryBody {
+  padding: 15px 15px 12px;
+}
+
+.ambassadorNameRow,
+.ambassadorProfileNameRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.ambassadorNameRow h3 {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.ambassadorLocation {
+  margin-top: 6px;
+  min-height: 18px;
+  font-size: 13px;
+}
+
+.ambassadorEmail {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ambassadorEmail:hover { text-decoration: underline; }
+
+.mutedText { color: var(--muted); }
+
+.ambassadorGalleryStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ambassadorGalleryStats > div {
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--box-bg);
+  border: 1px solid var(--border);
+}
+
+.ambassadorGalleryStats strong,
+.ambassadorGalleryStats span {
+  display: block;
+}
+
+.ambassadorGalleryStats strong {
+  font-size: 17px;
+  color: var(--text);
+}
+
+.ambassadorGalleryStats span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.ambassadorCardChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.ambassadorChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.chipGood {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.chipMuted {
+  background: var(--soft);
+  color: var(--muted);
+}
+
+body.dark .chipGood {
+  background: rgba(34,197,94,.16);
+  color: #86efac;
+}
+
+.ambassadorGalleryFooter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 12px 15px 15px;
+  border-top: 1px solid var(--border);
+}
+
+.ambassadorGalleryFooter button {
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.ambassadorProfileButton {
+  background: var(--red2);
+  color: white;
+  border-radius: 10px;
+}
+
+.ambassadorListView {
+  display: grid;
+  gap: 9px;
+}
+
+.ambassadorListCard {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--white);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.ambassadorListCard .ambassadorGalleryPhoto {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+
+.ambassadorListBody {
+  min-width: 0;
+}
+
+.ambassadorListBody strong,
+.ambassadorListBody span,
+.ambassadorListBody small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ambassadorListBody span,
+.ambassadorListBody small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ambassadorListMeta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ambassadorCardActions {
+  display: flex;
+  gap: 6px;
+}
+
+.directoryEmpty {
+  grid-column: 1 / -1;
+  padding: 34px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.ambassadorProfileModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15,23,42,.58);
+  backdrop-filter: blur(5px);
+}
+
+.ambassadorProfileModal.hidden { display: none; }
+
+.ambassadorProfileDialog {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: min(860px, calc(100vh - 40px));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--white);
+  box-shadow: 0 28px 70px rgba(0,0,0,.28);
+}
+
+.ambassadorProfileClose {
+  position: sticky;
+  top: 12px;
+  z-index: 2;
+  float: right;
+  margin: 12px 12px 0 0;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.ambassadorProfileContent {
+  padding: 26px;
+  clear: both;
+}
+
+.ambassadorProfileHero {
+  display: grid;
+  grid-template-columns: 138px minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+}
+
+.ambassadorProfilePhoto {
+  width: 138px;
+  height: 138px;
+  object-fit: cover;
+  border-radius: 20px;
+  background: var(--soft);
+  font-size: 44px;
+}
+
+.ambassadorProfileNameRow h2 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.ambassadorProfileContact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+
+.ambassadorProfileContact a,
+.ambassadorProfileContact span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ambassadorProfileMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.ambassadorProfileMetrics > div {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--box-bg);
+}
+
+.ambassadorProfileMetrics strong,
+.ambassadorProfileMetrics span {
+  display: block;
+}
+
+.ambassadorProfileMetrics strong {
+  font-size: 24px;
+  color: var(--text);
+}
+
+.ambassadorProfileMetrics span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ambassadorProfileSection {
+  margin-top: 24px;
+}
+
+.ambassadorProfileSection h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.ambassadorStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ambassadorStatusItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--box-bg);
+  font-size: 13px;
+}
+
+.ambassadorStatusItem span { color: var(--muted); }
+.ambassadorStatusItem strong { color: var(--text); }
+.ambassadorStatusItem .statusGood { color: #15803d; }
+body.dark .ambassadorStatusItem .statusGood { color: #86efac; }
+
+.profileLongText {
+  white-space: pre-wrap;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.ambassadorProfileActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+body.modalOpen { overflow: hidden; }
+
+@media (max-width: 1040px) {
+  .ambassadorGalleryGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ambassadorToolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ambassadorToolbar .ambassadorSearchField {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .ambassadorDirectoryHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ambassadorToolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ambassadorToolbar .ambassadorSearchField {
+    grid-column: 1 / -1;
+  }
+
+  .ambassadorGalleryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ambassadorListCard {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+
+  .ambassadorListMeta {
+    display: none;
+  }
+
+  .ambassadorProfileHero {
+    grid-template-columns: 94px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .ambassadorProfilePhoto {
+    width: 94px;
+    height: 94px;
+    border-radius: 16px;
+  }
+
+  .ambassadorProfileNameRow h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .ambassadorToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .ambassadorToolbar .ambassadorSearchField {
+    grid-column: auto;
+  }
+
+  .ambassadorGalleryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ambassadorViewBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ambassadorGalleryPhotoWrap {
+    aspect-ratio: 16 / 9;
+  }
+
+  .ambassadorListCard {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .ambassadorListCard .ambassadorCardActions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .ambassadorProfileModal {
+    padding: 8px;
+    place-items: end center;
+  }
+
+  .ambassadorProfileDialog {
+    max-height: calc(100vh - 16px);
+    border-radius: 20px 20px 10px 10px;
+  }
+
+  .ambassadorProfileContent {
+    padding: 18px;
+  }
+
+  .ambassadorProfileHero {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+
+  .ambassadorProfilePhoto {
+    width: 74px;
+    height: 74px;
+    border-radius: 14px;
+  }
+
+  .ambassadorProfileMetrics,
+  .ambassadorStatusGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body:not(.desktop-mode) #ambassadorDirectoryPage .card {
+  width: min(1180px, calc(100vw - 28px));
+  max-width: none;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
