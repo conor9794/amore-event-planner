@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/recap-review.css" />
   <link rel="stylesheet" href="/todays-events.css" />
   <link rel="stylesheet" href="/payroll.css" />
-  <link rel="stylesheet" href="/command-center.css" />
+  <link rel="stylesheet" href="/command-center.css" />\n  <link rel="stylesheet" href="/ambassador-directory.css" />
 </head>
 <body>
   <main class="app">
@@ -190,30 +190,74 @@
 
 
     <section id="ambassadorDirectoryPage" class="page">
-      <section class="card">
-        <div class="sectionIntro">
-          <h2>Ambassadors</h2>
-          <p>Add and maintain the basic ambassador directory without working directly in Airtable.</p>
+      <section class="card ambassadorDirectoryCard">
+        <div class="ambassadorDirectoryHeader">
+          <div class="sectionIntro">
+            <div class="eyebrow">Team Directory</div>
+            <h2>Ambassadors</h2>
+            <p>Browse the ambassador roster, check onboarding status, and open a profile for more detail.</p>
+          </div>
+          <div id="ambassadorDirectoryCount" class="ambassadorDirectoryCount">0 ambassadors</div>
         </div>
-        <form id="ambassadorDirectoryForm" class="ambassadorForm">
-          <div class="boxTitle" id="ambassadorDirectoryFormTitle">Add Ambassador</div>
-          <label>Name<input id="ambassadorName" required placeholder="Full name" /></label>
-          <label>Email<input id="ambassadorEmail" type="email" placeholder="name@example.com" /></label>
-          <div class="grid2">
-            <label>State<input id="ambassadorState" placeholder="e.g. NY" /></label>
-            <label>Region<input id="ambassadorRegion" placeholder="e.g. Long Island" /></label>
-          </div>
-          <label>Photo URL<input id="ambassadorPhotoUrl" type="url" placeholder="Optional https:// image link" /></label>
-          <div class="actions">
-            <button type="submit" id="saveAmbassadorBtn" class="primary">Add Ambassador</button>
-            <button type="button" id="cancelAmbassadorEditBtn" class="secondary hidden">Cancel</button>
-          </div>
-        </form>
+
+        <details id="ambassadorFormDetails" class="ambassadorAddDetails">
+          <summary>+ Add or edit ambassador</summary>
+          <form id="ambassadorDirectoryForm" class="ambassadorForm">
+            <div class="boxTitle" id="ambassadorDirectoryFormTitle">Add Ambassador</div>
+            <label>Name<input id="ambassadorName" required placeholder="Full name" /></label>
+            <label>Email<input id="ambassadorEmail" type="email" placeholder="name@example.com" /></label>
+            <div class="grid2">
+              <label>State<input id="ambassadorState" placeholder="e.g. NY" /></label>
+              <label>Region<input id="ambassadorRegion" placeholder="e.g. Long Island" /></label>
+            </div>
+            <label>Photo URL<input id="ambassadorPhotoUrl" type="url" placeholder="Optional https:// image link" /></label>
+            <div class="actions">
+              <button type="submit" id="saveAmbassadorBtn" class="primary">Add Ambassador</button>
+              <button type="button" id="cancelAmbassadorEditBtn" class="secondary hidden">Cancel</button>
+            </div>
+          </form>
+        </details>
+
         <div id="ambassadorDirectoryMessage" class="message hidden" role="status"></div>
-        <label>Search Ambassadors<input id="ambassadorDirectorySearch" type="search" placeholder="Name, email, state, or region..." /></label>
-        <div id="ambassadorDirectoryList" class="ambassadorDirectoryList"></div>
+
+        <div class="ambassadorToolbar">
+          <label class="ambassadorSearchField">Search
+            <input id="ambassadorDirectorySearch" type="search" placeholder="Name, email, phone, state, region, language..." />
+          </label>
+          <label>State
+            <select id="ambassadorStateFilter"><option value="all">All states</option></select>
+          </label>
+          <label>Region
+            <select id="ambassadorRegionFilter"><option value="all">All regions</option></select>
+          </label>
+          <label>Status
+            <select id="ambassadorStatusFilter">
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+          <button type="button" id="ambassadorClearFilters" class="ambassadorToolbarButton">Clear</button>
+        </div>
+
+        <div class="ambassadorViewBar">
+          <span class="boxHint">Select a card to view the full ambassador profile.</span>
+          <div class="ambassadorViewToggle" aria-label="Ambassador view">
+            <button type="button" id="ambassadorGalleryViewBtn" aria-pressed="true">Gallery</button>
+            <button type="button" id="ambassadorListViewBtn" aria-pressed="false">List</button>
+          </div>
+        </div>
+
+        <div id="ambassadorDirectoryList" class="ambassadorDirectoryList ambassadorGalleryGrid"></div>
       </section>
     </section>
+
+    <div id="ambassadorProfileModal" class="ambassadorProfileModal hidden" role="dialog" aria-modal="true" aria-label="Ambassador profile">
+      <div class="ambassadorProfileDialog">
+        <button type="button" id="ambassadorProfileClose" class="ambassadorProfileClose" aria-label="Close profile">×</button>
+        <div id="ambassadorProfileContent" class="ambassadorProfileContent"></div>
+      </div>
+    </div>
 
     <section id="assignPage" class="page">
       <section class="card">
