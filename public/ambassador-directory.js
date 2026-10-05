@@ -60,7 +60,7 @@ function filteredAmbassadors() {
   const region = directoryEl("ambassadorRegionFilter").value;
   const status = directoryEl("ambassadorStatusFilter").value;
 
-  return directoryAmbassadors.filter((ambassador) => {
+  const filtered = directoryAmbassadors.filter((ambassador) => {
     const searchText = [
       ambassador.name,
       ambassador.email,
@@ -78,6 +78,20 @@ function filteredAmbassadors() {
       (status === "inactive" && !ambassador.active);
 
     return matchesTerm && matchesState && matchesRegion && matchesStatus;
+  });
+
+  const sort = directoryEl("ambassadorSort")?.value || "name-asc";
+  return filtered.sort((a, b) => {
+    if (sort === "bookings-desc") {
+      return Number(b.bookingCount || 0) - Number(a.bookingCount || 0) || (a.name || "").localeCompare(b.name || "");
+    }
+    if (sort === "bookings-asc") {
+      return Number(a.bookingCount || 0) - Number(b.bookingCount || 0) || (a.name || "").localeCompare(b.name || "");
+    }
+    if (sort === "name-desc") {
+      return (b.name || "").localeCompare(a.name || "");
+    }
+    return (a.name || "").localeCompare(b.name || "");
   });
 }
 
@@ -328,6 +342,7 @@ function resetDirectoryFilters() {
   directoryEl("ambassadorStateFilter").value = "all";
   directoryEl("ambassadorRegionFilter").value = "all";
   directoryEl("ambassadorStatusFilter").value = "all";
+  directoryEl("ambassadorSort").value = "name-asc";
   renderDirectory();
 }
 
@@ -344,6 +359,7 @@ function initAmbassadorDirectory() {
   directoryEl("ambassadorStateFilter")?.addEventListener("change", renderDirectory);
   directoryEl("ambassadorRegionFilter")?.addEventListener("change", renderDirectory);
   directoryEl("ambassadorStatusFilter")?.addEventListener("change", renderDirectory);
+  directoryEl("ambassadorSort")?.addEventListener("change", renderDirectory);
   directoryEl("ambassadorClearFilters")?.addEventListener("click", resetDirectoryFilters);
   directoryEl("ambassadorGalleryViewBtn")?.addEventListener("click", () => setDirectoryView("gallery"));
   directoryEl("ambassadorListViewBtn")?.addEventListener("click", () => setDirectoryView("list"));
