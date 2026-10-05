@@ -22,16 +22,30 @@ function photoUrl(value) {
   return attachment?.thumbnails?.large?.url || attachment?.url || "";
 }
 
+function hasAttachment(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
 function toAmbassador(record) {
   const f = record.fields || {};
   return {
     id: record.id,
     name: text(f["Ambassador Name"] || f.Name || f["Full Name"]),
     email: text(f.Email),
+    phone: text(f.Phone),
     state: array(f.State),
     region: array(f.Region),
+    active: Boolean(f.Active),
+    languages: array(f["Language(s)"]),
+    demographics: text(f.Demographics),
     photoUrl: photoUrl(f.Headshot),
-    bookingCount: Array.isArray(f.Bookings) ? f.Bookings.length : 0
+    bookingCount: Number(f["Booking Count"] || (Array.isArray(f.Bookings) ? f.Bookings.length : 0)) || 0,
+    taxFormOnFile: Boolean(f["Tax Form on File"]),
+    portalAccess: Boolean(f["Portal Access Enabled"]),
+    w9OnFile: hasAttachment(f["W-9"]),
+    signedAgreementOnFile: hasAttachment(f["Signed Agreement"]),
+    onboardingFormsOnFile: hasAttachment(f["Onboarding Forms"]),
+    notes: text(f.Notes)
   };
 }
 
