@@ -649,3 +649,8 @@ body:not(.desktop-mode) #ambassadorDirectoryPage .card {
   left: 50%;
   transform: translateX(-50%);
 }
+
+
+.ambassadorGalleryStatsSingle {
+  grid-template-columns: 1fr;
+}
