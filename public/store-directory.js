@@ -1,7 +1,7 @@
 let storeDirectoryStores = [];
 let storePage = 1;
 const STORE_PAGE_SIZE = 24;
-const STORE_GEOFENCE_METERS = 152.4;
+const STORE_GEOFENCE_METERS = 76.2;
 let storeCardMaps = [];
 let storeDetailMap = null;
 
@@ -120,7 +120,7 @@ function openStoreProfile(id) {
       <div><span>Latitude</span><strong>${hasGps?store.latitude.toFixed(6):"—"}</strong></div>
       <div><span>Longitude</span><strong>${hasGps?store.longitude.toFixed(6):"—"}</strong></div>
     </div>
-    <section class="storeGeofenceInfo"><h3>Geofence</h3><p><span class="redFenceDot"></span> 500 ft radius centered on the saved store coordinates.</p></section>
+    <section class="storeGeofenceInfo"><h3>Geofence</h3><p><span class="redFenceDot"></span> 250 ft radius centered on the saved store coordinates.</p></section>
     ${store.notes?`<section class="storeNotes"><h3>Notes</h3><p>${storeEsc(store.notes)}</p></section>`:""}`;
   storeEl("storeProfileModal").classList.remove("hidden");
   document.body.classList.add("modalOpen");
