@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="/todays-events.css" />
   <link rel="stylesheet" href="/payroll.css" />
   <link rel="stylesheet" href="/command-center.css" />\n  <link rel="stylesheet" href="/ambassador-directory.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="/store-directory.css" />
 </head>
 <body>
   <main class="app">
@@ -34,6 +36,7 @@
       <button type="button" id="recapTab" class="tab">Recap Review</button>
       <button type="button" id="payrollTab" class="tab">Payroll</button>
       <button type="button" id="ambassadorTab" class="tab">Ambassadors</button>
+      <button type="button" id="storesTab" class="tab">Stores</button>
 
     </nav>
 
@@ -267,6 +270,57 @@
       </div>
     </div>
 
+
+    <section id="storeDirectoryPage" class="page">
+      <section class="card storeDirectoryCard">
+        <div class="storeDirectoryHeader">
+          <div class="sectionIntro">
+            <div class="eyebrow">Location Directory</div>
+            <h2>Stores</h2>
+            <p>Browse every stored location and visually verify its geofence.</p>
+          </div>
+          <div id="storeDirectoryCount" class="storeDirectoryCount">0 stores</div>
+        </div>
+        <div id="storeDirectoryMessage" class="message hidden" role="status"></div>
+        <div class="storeToolbar">
+          <label class="storeSearchField">Search
+            <input id="storeDirectorySearch" type="search" placeholder="Store name, address, state, or region..." />
+          </label>
+          <label>State<select id="storeStateFilter"><option value="all">All states</option></select></label>
+          <label>Region<select id="storeRegionFilter"><option value="all">All regions</option></select></label>
+          <label>GPS
+            <select id="storeGpsFilter">
+              <option value="all">All GPS statuses</option>
+              <option value="ready">GPS ready</option>
+              <option value="missing">Missing coordinates</option>
+            </select>
+          </label>
+          <label>Sort
+            <select id="storeSort">
+              <option value="name-asc">Name A → Z</option>
+              <option value="name-desc">Name Z → A</option>
+              <option value="events-desc">Events High → Low</option>
+              <option value="events-asc">Events Low → High</option>
+            </select>
+          </label>
+          <button type="button" id="storeClearFilters" class="storeToolbarButton">Clear</button>
+        </div>
+        <div class="storeViewBar">
+          <span class="boxHint">Red circles show the 500 ft operational geofence around the saved coordinates.</span>
+          <span id="storePageLabel" class="storePageLabel"></span>
+        </div>
+        <div id="storeDirectoryList" class="storeGalleryGrid"></div>
+        <div id="storePagination" class="storePagination"></div>
+      </section>
+    </section>
+
+    <div id="storeProfileModal" class="storeProfileModal hidden" role="dialog" aria-modal="true" aria-label="Store details">
+      <div class="storeProfileDialog">
+        <button type="button" id="storeProfileClose" class="storeProfileClose" aria-label="Close store details">×</button>
+        <div id="storeProfileContent" class="storeProfileContent"></div>
+      </div>
+    </div>
+
     <section id="assignPage" class="page">
       <section class="card">
         <div class="sectionIntro">
@@ -447,5 +501,7 @@
   <script src="/command-center-core.js"></script>
   <script src="/command-center.js"></script>
   <script src="/ambassador-directory.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/store-directory.js"></script>
 </body>
 </html>
