@@ -1,5 +1,5 @@
 "use strict";
-const { timingSafeEqual } = require("node:crypto");
+const { verify } = require("./_planner-auth");
 const { listRecords, createRecord } = require("./_airtable");
 const REGIONS_TABLE = process.env.AIRTABLE_REGIONS_TABLE || "tblBzNsZBH3stZwiJ";
 const STATE_CODES = new Set("AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC".split(" "));
@@ -16,18 +16,6 @@ function json(statusCode, data) {
   };
 }
 
-function authorized(event) {
-  // Fail closed if the environment variable has not been set or is too weak.
-  const expected = process.env.REGION_ADMIN_PASSWORD || "";
-  if (expected.length < 24) return null;
-  const headers = event.headers || {};
-  const supplied = String(headers["x-region-admin-password"] || headers["X-Region-Admin-Password"] || "");
-  if (supplied.length < 1 || supplied.length > 512) return false;
-  const a = Buffer.from(supplied, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 function validate(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return "Invalid request.";
   const name = typeof body.name === "string" ? body.name.normalize("NFKC").trim().replace(/\s+/g, " ") : "";
@@ -39,9 +27,10 @@ function validate(body) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed." });
-  const access = authorized(event);
-  if (access === null) return json(503, { error: "Region management is not configured yet. Ask the administrator to set REGION_ADMIN_PASSWORD in Netlify Functions settings and redeploy." });
-  if (!access) return json(401, { error: "Incorrect management password." });
+  let session;
+  try { session = verify(event.headers || {}); }
+  catch (_) { return json(503, { error: "Planner sign-in is not configured." }); }
+  if (!session) return json(401, { error: "Sign in to the Event Planner first." });
   if (String(event.body || "").length > 2000) return json(413, { error: "Request is too large." });
 
   let input;
