@@ -126,6 +126,8 @@ function switchPage(pageName) {
 
   $("commandCenterPage")?.classList.remove("active");
   $("overviewTab")?.classList.remove("active");
+  $("regionsAdminPage")?.classList.remove("active");
+  $("regionsAdminTab")?.classList.remove("active");
 
   $("addEventPage").classList.toggle("active", isAdd);
   $("assignPage").classList.toggle("active", isAssign);
