@@ -36,6 +36,7 @@
       <button type="button" id="payrollTab" class="tab">Payroll</button>
       <button type="button" id="ambassadorTab" class="tab">Ambassadors</button>
       <button type="button" id="regionsAdminTab" class="tab">Manage Regions</button>
+      <button type="button" id="plannerSignOut" class="tab">Sign Out</button>
 
     </nav>
 
@@ -450,9 +451,6 @@
           <h3>Add an operating region</h3>
           <p class="regionsAdminHelp">Use a distinctive market name like Milwaukee WI or Madison WI. A state can have multiple operating regions.</p>
           <form id="regionsAdminForm" autocomplete="off">
-            <label>Management password
-              <input id="regionsAdminPassword" type="password" autocomplete="off" placeholder="Password provided by your administrator" required />
-            </label>
             <label>Region name
               <input id="regionsAdminName" type="text" maxlength="80" placeholder="e.g., Milwaukee WI" required />
             </label>
@@ -517,7 +515,7 @@
               <button id="regionsAdminSave" class="primary" type="submit">Add region</button>
             </div>
           </form>
-          <p class="regionsAdminHelp">Access is password protected. Contact the administrator if the password is not configured. No ambassador or event assignments are changed by adding a region.</p>
+          <p class="regionsAdminHelp">This area uses your Event Planner login. No separate region password is needed. Adding a region does not modify existing events or ambassador assignments.</p>
         </section>
         <section class="card">
           <h3>Available event areas</h3>
@@ -543,5 +541,11 @@
   <script src="/command-center-core.js"></script>
   <script src="/command-center.js"></script>
   <script src="/ambassador-directory.js"></script>
+<script>
+document.getElementById("plannerSignOut").addEventListener("click", async () => {
+  try { await fetch("/api/planner-auth", { method: "DELETE", credentials: "same-origin" }); }
+  finally { window.location.replace("/login.html"); }
+});
+</script>
 </body>
 </html>
