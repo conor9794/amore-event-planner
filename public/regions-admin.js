@@ -47,10 +47,9 @@
   async function save(event) {
     event.preventDefault();
     if (busy) return;
-    const password = $("regionsAdminPassword").value;
     const name = $("regionsAdminName").value.trim().replace(/\s+/g, " ");
     const state = $("regionsAdminState").value;
-    if (!password || !name || !state) return message("Enter the management password, region name, and state.", true);
+    if (!name || !state) return message("Enter a region name and state.", true);
     if (!window.confirm('Add "' + name + '" (' + state + ') as an approved event area?')) return;
 
     busy = true;
@@ -60,7 +59,7 @@
       const response = await fetch("/api/region-admin", {
         method: "POST",
         cache: "no-store",
-        headers: { "Content-Type": "application/json", "X-Region-Admin-Password": password },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, state })
       });
       const data = await response.json();
