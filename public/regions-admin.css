@@ -1,0 +1,11 @@
+.regionsAdminHeader { margin-bottom: 18px; }
+.regionsAdminHeader p, .regionsAdminHelp { color: var(--muted, #657080); line-height: 1.5; }
+.regionsAdminLayout { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(240px, 1fr); gap: 18px; align-items: start; }
+.regionsAdminLayout .card { margin: 0; min-width: 0; }
+.regionsAdminLayout form { display: grid; gap: 15px; }
+.regionsAdminLayout form label { display: grid; gap: 7px; }
+.regionsAdminActions { display: flex; gap: 12px; flex-wrap: wrap; }
+.regionsAdminList { list-style: none; margin: 10px 0 0; padding: 0; max-height: 55vh; overflow: auto; }
+.regionsAdminList li { padding: 10px 0; border-bottom: 1px solid var(--border, #ddd); display: flex; justify-content: space-between; gap: 12px; }
+.regionsAdminList li span { color: var(--muted, #657080); }
+@media (max-width: 800px) { .regionsAdminLayout { grid-template-columns: 1fr; } }

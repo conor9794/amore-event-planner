@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/recap-review.css" />
   <link rel="stylesheet" href="/todays-events.css" />
   <link rel="stylesheet" href="/payroll.css" />
+  <link rel="stylesheet" href="/regions-admin.css" />
   <link rel="stylesheet" href="/command-center.css" />\n  <link rel="stylesheet" href="/ambassador-directory.css" />
 </head>
 <body>
@@ -34,6 +35,8 @@
       <button type="button" id="recapTab" class="tab">Recap Review</button>
       <button type="button" id="payrollTab" class="tab">Payroll</button>
       <button type="button" id="ambassadorTab" class="tab">Ambassadors</button>
+      <button type="button" id="regionsAdminTab" class="tab">Manage Regions</button>
+      <button type="button" id="plannerSignOut" class="tab">Sign Out</button>
 
     </nav>
 
@@ -152,6 +155,11 @@
                 <option value="DC">DC</option>
                 <option value="MA">MA</option>
                 <option value="FL">FL</option>
+                <option value="RI">RI</option>
+                <option value="MI">MI</option>
+                <option value="NY">NY</option>
+                <option value="IL">IL</option>
+                <option value="WI">WI</option>
               </select>
             </label>
           </div>
@@ -432,6 +440,91 @@
         <div id="payrollList" class="payrollList"></div>
       </section>
     </section>
+    <section id="regionsAdminPage" class="page" aria-labelledby="regionsAdminHeading">
+      <div class="regionsAdminHeader">
+        <div class="eyebrow">Operations Settings</div>
+        <h2 id="regionsAdminHeading">Manage Regions</h2>
+        <p>Add operating markets here without editing Airtable. New approved regions automatically become choices under Add Event.</p>
+      </div>
+      <div class="regionsAdminLayout">
+        <section class="card">
+          <h3>Add an operating region</h3>
+          <p class="regionsAdminHelp">Use a distinctive market name like Milwaukee WI or Madison WI. A state can have multiple operating regions.</p>
+          <form id="regionsAdminForm" autocomplete="off">
+            <label>Region name
+              <input id="regionsAdminName" type="text" maxlength="80" placeholder="e.g., Milwaukee WI" required />
+            </label>
+            <label>State
+              <select id="regionsAdminState" required>
+                <option value="">Select state…</option>
+                  <option value="AL">AL</option>
+                  <option value="AK">AK</option>
+                  <option value="AZ">AZ</option>
+                  <option value="AR">AR</option>
+                  <option value="CA">CA</option>
+                  <option value="CO">CO</option>
+                  <option value="CT">CT</option>
+                  <option value="DE">DE</option>
+                  <option value="FL">FL</option>
+                  <option value="GA">GA</option>
+                  <option value="HI">HI</option>
+                  <option value="ID">ID</option>
+                  <option value="IL">IL</option>
+                  <option value="IN">IN</option>
+                  <option value="IA">IA</option>
+                  <option value="KS">KS</option>
+                  <option value="KY">KY</option>
+                  <option value="LA">LA</option>
+                  <option value="ME">ME</option>
+                  <option value="MD">MD</option>
+                  <option value="MA">MA</option>
+                  <option value="MI">MI</option>
+                  <option value="MN">MN</option>
+                  <option value="MS">MS</option>
+                  <option value="MO">MO</option>
+                  <option value="MT">MT</option>
+                  <option value="NE">NE</option>
+                  <option value="NV">NV</option>
+                  <option value="NH">NH</option>
+                  <option value="NJ">NJ</option>
+                  <option value="NM">NM</option>
+                  <option value="NY">NY</option>
+                  <option value="NC">NC</option>
+                  <option value="ND">ND</option>
+                  <option value="OH">OH</option>
+                  <option value="OK">OK</option>
+                  <option value="OR">OR</option>
+                  <option value="PA">PA</option>
+                  <option value="RI">RI</option>
+                  <option value="SC">SC</option>
+                  <option value="SD">SD</option>
+                  <option value="TN">TN</option>
+                  <option value="TX">TX</option>
+                  <option value="UT">UT</option>
+                  <option value="VT">VT</option>
+                  <option value="VA">VA</option>
+                  <option value="WA">WA</option>
+                  <option value="WV">WV</option>
+                  <option value="WI">WI</option>
+                  <option value="WY">WY</option>
+                  <option value="DC">DC</option>
+              </select>
+            </label>
+            <div id="regionsAdminMessage" class="message hidden" role="status" aria-live="polite"></div>
+            <div class="regionsAdminActions">
+              <button id="regionsAdminSave" class="primary" type="submit">Add region</button>
+            </div>
+          </form>
+          <p class="regionsAdminHelp">This area uses your Event Planner login. No separate region password is needed. Adding a region does not modify existing events or ambassador assignments.</p>
+        </section>
+        <section class="card">
+          <h3>Available event areas</h3>
+          <p class="regionsAdminHelp">These currently approved and existing markets appear in the Add Event dropdown.</p>
+          <button id="regionsAdminRefresh" type="button" class="secondary">Refresh list</button>
+          <ul id="regionsAdminList" class="regionsAdminList" aria-live="polite"></ul>
+        </section>
+      </div>
+    </section>
   </main>
 
   <div id="recapToast" class="recapToast hidden" role="status"></div>
@@ -439,6 +532,7 @@
 
   <script src="/desktop.js"></script>
   <script src="/app.js"></script>
+  <script src="/regions-admin.js"></script>
   <script src="/staff-management.js"></script>
   <script src="/recap-review.js"></script>
   <script src="/recap-payroll-scheduled.js"></script>
@@ -447,5 +541,11 @@
   <script src="/command-center-core.js"></script>
   <script src="/command-center.js"></script>
   <script src="/ambassador-directory.js"></script>
+<script>
+document.getElementById("plannerSignOut").addEventListener("click", async () => {
+  try { await fetch("/api/planner-auth", { method: "DELETE", credentials: "same-origin" }); }
+  finally { window.location.replace("/login.html"); }
+});
+</script>
 </body>
 </html>
