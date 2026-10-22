@@ -231,6 +231,41 @@ async function loadBrands() {
     select.appendChild(option);
   });
 }
+
+// The central Operating Regions table is the source for new market choices.
+// Preserve the HTML options as a fallback if Airtable/Netlify is unavailable.
+async function loadEventAreas() {
+  const select = $("eventArea");
+  if (!select) return;
+
+  try {
+    const response = await fetch("/api/regions", { cache: "no-store" });
+    if (!response.ok) throw new Error("Region list request failed");
+
+    const data = await response.json();
+    if (!Array.isArray(data.regions) || !data.regions.length) {
+      throw new Error("Region list is empty");
+    }
+
+    const previousSelection = select.value;
+    const seen = new Set();
+    const newOptions = [new Option("Select area...", "")];
+    for (const region of data.regions) {
+      const name = String(region?.name || "").trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      const option = new Option(name, name);
+      option.dataset.regionId = region.id || "";
+      newOptions.push(option);
+    }
+
+    if (newOptions.length <= 1) throw new Error("No usable regions returned");
+    select.replaceChildren(...newOptions);
+    if (seen.has(previousSelection)) select.value = previousSelection;
+  } catch (err) {
+    console.warn("Using existing event-area choices until region API is available", err);
+  }
+}
 async function submitEvent(publish) {
   hideMessage();
 
@@ -1151,6 +1186,7 @@ $("confirmBookingBtn").addEventListener("click", confirmBooking);
 
 initTheme();
 loadBrands();
+loadEventAreas();
 loadConfigAndGoogle();
 
 window.addEventListener("focus", () => refreshPlannerEvents());
