@@ -11,7 +11,7 @@ button:disabled {opacity:.65;cursor:wait } #message { margin-top:15px;color:#a01
 </style></head>
 <body><main><div class="eyebrow">Amore Staffing</div><h1>Event Planner</h1><p>Authorized Amore operators only. Sign in with your assigned email address and password.</p>
 <form id="login"><label>Email address<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label>
-<button id="submit" type="submit">Sign In</button><div id="message" role="alert" aria-live="polite"></div></form><p class="foot">For account access, contact the Amore administrator.</p></main>
+<button id="submit" type="submit">Sign In</button><div id="message" role="alert" aria-live="polite"></div></form><p class="foot"><a href="/reset-password.html">Forgot password?</a></p><p class="foot">Only approved Amore operators can sign in.</p></main>
 <script>
 const form = document.getElementById("login"), message = document.getElementById("message"), submit = document.getElementById("submit");
 form.addEventListener("submit", async (e) => {
