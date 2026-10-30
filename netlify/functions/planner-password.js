@@ -92,7 +92,8 @@ async function changePassword(event, currentPassword, password) {
   await credentials.set(session.email, password);
   return json(200, { ok: true, message: "Password updated. Sign in again using your new password." }, true);
 }
-exports.handler = async (event) => {
+function createHandler(initializeBlobs = connectLambda) {
+return async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed." });
   if (String(event.body || "").length > 3072) return json(413, { error: "Request is too large." });
   const host = requestHost(event);
@@ -105,7 +106,7 @@ exports.handler = async (event) => {
   try {
     // The planner still uses Lambda-compatible Netlify handlers.
     // Connect the request context before accessing Blobs credentials or reset tokens.
-    if (event.blobs) connectLambda(event);
+    initializeBlobs(event);
     if (body.action === "request") return await requestReset(normalize(body.email), event);
     if (body.action === "reset") return await resetPassword(normalize(body.email), body.token, body.newPassword);
     if (body.action === "change") return await changePassword(event, body.currentPassword, body.newPassword);
@@ -115,4 +116,6 @@ exports.handler = async (event) => {
     return json(503, { error: "Password service is temporarily unavailable. Please try again." });
   }
 };
-exports.__test = { validatePassword, __setResetStoreProvider: (provider) => { resetStoreProvider = provider; } };
+}
+exports.handler = createHandler();
+exports.__test = { createHandler, validatePassword, __setResetStoreProvider: (provider) => { resetStoreProvider = provider; } };
