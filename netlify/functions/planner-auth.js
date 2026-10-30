@@ -18,11 +18,12 @@ exports.handler = async event => {
   if ((event.body || "").length > 4096) return json(413, { error: "Request too large." });
   try {
     const { email, password } = JSON.parse(event.body || "{}");
-    const account = authenticate(email, password);
+    const account = await authenticate(email, password);
     if (!account) return json(401, { error: "Invalid email or password." });
     const token = issue(account);
     return json(200, { ok: true, email: account }, secureCookie(token, 8 * 60 * 60));
-  } catch (_) {
-    return json(400, { error: "Unable to sign in. Check your credentials or contact the administrator." });
+  } catch (err) {
+    console.error("Operator login failure", err);
+    return json(503, { error: "Login service is temporarily unavailable. Please try again." });
   }
 };
