@@ -1,5 +1,6 @@
 "use strict";
 const { secureCookie, authenticate, issue, verify, configured } = require("./_planner-auth");
+const { connectLambda } = require("@netlify/blobs");
 function json(statusCode, body, cookie) {
   return { statusCode, headers: {
     "Content-Type": "application/json", "Cache-Control": "no-store",
@@ -17,6 +18,9 @@ exports.handler = async event => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed." });
   if ((event.body || "").length > 4096) return json(413, { error: "Request too large." });
   try {
+    // Lambda-compatible functions need the Blobs request environment connected.
+    // Without it, getStore() fails before passwords can be verified.
+    if (event.blobs) connectLambda(event);
     const { email, password } = JSON.parse(event.body || "{}");
     const account = await authenticate(email, password);
     if (!account) return json(401, { error: "Invalid email or password." });
