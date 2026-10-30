@@ -27,6 +27,7 @@ function mockStore(map) {
 require("../netlify/functions/_planner-credentials").__setProviderForTests(()=>mockStore(storeData));
 const auth=require("../netlify/functions/_planner-auth");
 const password=require("../netlify/functions/planner-password");
+const handler = password.__test.createHandler(() => {});
 password.__test.__setResetStoreProvider(()=>mockStore(resetData));
 function call(data,cookie="") { return {
   httpMethod:"POST",headers:{host:"deploy-preview-12--amore-event-planner.netlify.app", ...(cookie?{cookie}:{}), origin:"https://deploy-preview-12--amore-event-planner.netlify.app"},
@@ -35,10 +36,10 @@ function call(data,cookie="") { return {
 const output=r=>JSON.parse(r.body);
 test("only authenticated operator with current password can change password, and temporary password stops working", async()=>{
   const session="amore_planner_session="+auth.issue(email);
-  assert.equal((await password.handler(call({action:"change",currentPassword:"wrong",newPassword:"A new very strong passphrase 2026"},session))).statusCode,401);
-  assert.equal((await password.handler(call({action:"change",currentPassword:temporary,newPassword:"short"},session))).statusCode,400);
-  assert.equal((await password.handler(call({action:"change",currentPassword:temporary,newPassword:"A new very strong passphrase 2026"}))).statusCode,401);
-  const good=await password.handler(call({action:"change",currentPassword:temporary,newPassword:"A new very strong passphrase 2026"},session));
+  assert.equal((await handler(call({action:"change",currentPassword:"wrong",newPassword:"A new very strong passphrase 2026"},session))).statusCode,401);
+  assert.equal((await handler(call({action:"change",currentPassword:temporary,newPassword:"short"},session))).statusCode,400);
+  assert.equal((await handler(call({action:"change",currentPassword:temporary,newPassword:"A new very strong passphrase 2026"}))).statusCode,401);
+  const good=await handler(call({action:"change",currentPassword:temporary,newPassword:"A new very strong passphrase 2026"},session));
   assert.equal(good.statusCode,200);
   assert.match(good.headers["Set-Cookie"],/Max-Age=0/);
   assert.equal(await auth.authenticate(email,temporary),null);
@@ -47,7 +48,7 @@ test("only authenticated operator with current password can change password, and
 test("email reset is unavailable without a configured delivery provider",async()=>{
   const saved=process.env.RESEND_API_KEY;
   delete process.env.RESEND_API_KEY;
-  const response=await password.handler(call({action:"request",email}));
+  const response=await handler(call({action:"request",email}));
   assert.equal(response.statusCode,503);
   process.env.RESEND_API_KEY=saved;
 });
@@ -62,23 +63,23 @@ test("only one-use emailed tokens can reset passwords",async()=>{
     return {ok:true,json:async()=>({id:"example"})};
   };
   try{
-    const unknown=await password.handler(call({action:"request",email:"unapproved@example.com"}));
+    const unknown=await handler(call({action:"request",email:"unapproved@example.com"}));
     assert.equal(unknown.statusCode,200);
     assert.equal(sent,null);
-    const requested=await password.handler(call({action:"request",email}));
+    const requested=await handler(call({action:"request",email}));
     assert.equal(requested.statusCode,200);
     assert.equal(sent.to[0],email);
     const resetLink=sent.text.match(/https:\/\/\S+/)[0];
     const url=new URL(resetLink), token=url.searchParams.get("token");
     assert.equal(token.length,64);
-    const outcome=await password.handler(call({action:"reset",email,token,newPassword:"My third secure passphrase 2026"}));
+    const outcome=await handler(call({action:"reset",email,token,newPassword:"My third secure passphrase 2026"}));
     assert.equal(outcome.statusCode,200);
     assert.equal(await auth.authenticate(email,"My third secure passphrase 2026"),email);
-    assert.equal((await password.handler(call({action:"reset",email,token,newPassword:"Another secure passphrase 2026"}))).statusCode,401);
+    assert.equal((await handler(call({action:"reset",email,token,newPassword:"Another secure passphrase 2026"}))).statusCode,401);
   }finally{global.fetch=originalFetch;}
 });
 test("rejects cross-origin password submissions",async()=>{
   const req=call({action:"request",email});
   req.headers.origin="https://attacker.example";
-  assert.equal((await password.handler(req)).statusCode,403);
+  assert.equal((await handler(req)).statusCode,403);
 });
