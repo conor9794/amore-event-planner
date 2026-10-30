@@ -36,6 +36,7 @@
       <button type="button" id="payrollTab" class="tab">Payroll</button>
       <button type="button" id="ambassadorTab" class="tab">Ambassadors</button>
       <button type="button" id="regionsAdminTab" class="tab">Manage Regions</button>
+      <button type="button" id="plannerChangePassword" class="tab">Change Password</button>
       <button type="button" id="plannerSignOut" class="tab">Sign Out</button>
 
     </nav>
@@ -542,6 +543,7 @@
   <script src="/command-center.js"></script>
   <script src="/ambassador-directory.js"></script>
 <script>
+document.getElementById("plannerChangePassword").addEventListener("click", () => window.location.assign("/change-password.html"));
 document.getElementById("plannerSignOut").addEventListener("click", async () => {
   try { await fetch("/api/planner-auth", { method: "DELETE", credentials: "same-origin" }); }
   finally { window.location.replace("/login.html"); }
