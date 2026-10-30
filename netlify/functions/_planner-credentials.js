@@ -42,6 +42,8 @@ function assertCredential(value) {
 async function get(email) {
   const value = await provider().get(email);
   if (value === null) return null;
+  // A reset request may reserve a row before the first password change.
+  if (!value.salt && !value.hash) return null;
   assertCredential(value);
   return value;
 }
