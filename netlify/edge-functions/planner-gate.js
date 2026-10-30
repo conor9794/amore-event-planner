@@ -4,6 +4,7 @@ const SKIP = new Set([
   "/api/planner-auth", "/.netlify/functions/planner-auth",
   "/api/planner-login", "/.netlify/functions/planner-login",
   "/api/planner-password", "/.netlify/functions/planner-password",
+  "/api/planner-password-v2", "/.netlify/functions/planner-password-v2",
   "/api/social-hour-recap-export", "/.netlify/functions/social-hour-recap-export",
   "/api/talkhouse-recap-export", "/.netlify/functions/talkhouse-recap-export"
 ]);
