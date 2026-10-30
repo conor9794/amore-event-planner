@@ -1,5 +1,6 @@
 "use strict";
 const crypto = require("node:crypto");
+const { connectLambda } = require("@netlify/blobs");
 const { verify, accounts, authenticate, secureCookie } = require("./_planner-auth");
 const credentials = require("./_planner-credentials");
 
@@ -102,6 +103,9 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch (_) { return json(400, { error: "Invalid request." }); }
   if (!body || typeof body !== "object" || Array.isArray(body)) return json(400, { error: "Invalid request." });
   try {
+    // The planner still uses Lambda-compatible Netlify handlers.
+    // Connect the request context before accessing Blobs credentials or reset tokens.
+    if (event.blobs) connectLambda(event);
     if (body.action === "request") return await requestReset(normalize(body.email), event);
     if (body.action === "reset") return await resetPassword(normalize(body.email), body.token, body.newPassword);
     if (body.action === "change") return await changePassword(event, body.currentPassword, body.newPassword);
