@@ -1,5 +1,6 @@
 "use strict";
 const crypto = require("node:crypto");
+const credentials = require("./_planner-credentials");
 const COOKIE_NAME = "amore_planner_session";
 const TTL_SECONDS = 8 * 60 * 60;
 function secret() {
@@ -49,12 +50,14 @@ function verify(headers = {}) {
 function secureCookie(token, maxAge) {
   return COOKIE_NAME + "=" + token + "; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=" + maxAge;
 }
-function authenticate(email, password) {
+async function authenticate(email, password) {
   const users = accounts();
   const normalized = String(email || "").trim().toLowerCase();
   const pw = typeof password === "string" ? password : "";
   if (!users[normalized] || !pw || pw.length > 200) return null;
-  const { salt, hash } = users[normalized];
+  // A saved self-service password entirely replaces the temporary Netlify hash.
+  // Never accept the old password again once an override exists.
+  const { salt, hash } = (await credentials.get(normalized)) || users[normalized];
   if (!/^[a-f0-9]{32}$/.test(String(salt)) || !/^[a-f0-9]{64}$/.test(String(hash))) throw Error("Invalid account hash configuration.");
   const computed = crypto.scryptSync(pw, Buffer.from(salt, "hex"), 32, { N: 16384, r: 8, p: 1 });
   const original = Buffer.from(hash, "hex");
