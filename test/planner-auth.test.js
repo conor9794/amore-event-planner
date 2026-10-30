@@ -6,12 +6,13 @@ const hash = scryptSync(password, Buffer.from(salt, "hex"), 32, { N:16384, r:8, 
 const data = Object.fromEntries(["conor9794@gmail.com","melinda@amorestaffing.com","tommaguire2323@gmail.com"].map(key => [key,{salt,hash}]));
 process.env.PLANNER_AUTH_USERS = JSON.stringify(data);
 process.env.PLANNER_SESSION_SECRET = "very-long-dedicated-planner-test-signing-secret-2026-not-prod";
+require("../netlify/functions/_planner-credentials").__setProviderForTests(() => ({ get: async () => null }));
 const core = require("../netlify/functions/_planner-auth");
 const { handler } = require("../netlify/functions/planner-auth");
-test("only three allowlisted operators can sign in, never a fourth", () => {
-  assert.equal(core.authenticate(email,password),email);
-  assert.equal(core.authenticate("unknown@example.com",password),null);
-  assert.equal(core.authenticate(email,"wrong"),null);
+test("only three allowlisted operators can sign in, never a fourth", async () => {
+  assert.equal(await core.authenticate(email,password),email);
+  assert.equal(await core.authenticate("unknown@example.com",password),null);
+  assert.equal(await core.authenticate(email,"wrong"),null);
 });
 test("session is signed, expires and rejects tampering", () => {
   const token = core.issue(email);
