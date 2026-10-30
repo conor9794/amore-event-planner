@@ -8,7 +8,8 @@ process.env.PLANNER_AUTH_USERS = JSON.stringify(data);
 process.env.PLANNER_SESSION_SECRET = "very-long-dedicated-planner-test-signing-secret-2026-not-prod";
 require("../netlify/functions/_planner-credentials").__setProviderForTests(() => ({ get: async () => null }));
 const core = require("../netlify/functions/_planner-auth");
-const { handler } = require("../netlify/functions/planner-auth");
+const { __test: { createHandler } } = require("../netlify/functions/planner-auth");
+const handler = createHandler(() => {});
 test("only three allowlisted operators can sign in, never a fourth", async () => {
   assert.equal(await core.authenticate(email,password),email);
   assert.equal(await core.authenticate("unknown@example.com",password),null);
