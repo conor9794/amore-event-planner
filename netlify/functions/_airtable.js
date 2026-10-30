@@ -72,10 +72,10 @@ async function listRecords(tableId, params = {}) {
   return records;
 }
 
-async function createRecord(tableId, fields) {
+async function createRecord(tableId, fields, options = {}) {
   const data = await airtableRequest(encodeURIComponent(tableId), {
     method: "POST",
-    body: JSON.stringify({ fields })
+    body: JSON.stringify({ fields, ...options })
   });
   return data;
 }

@@ -1,4 +1,5 @@
 const { TABLES, listRecords, createRecord, updateRecord } = require("./_airtable");
+const REGIONS_TABLE = process.env.AIRTABLE_REGIONS_TABLE || "tblBzNsZBH3stZwiJ";
 
 function escapeFormulaString(value) {
   return String(value || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -71,6 +72,22 @@ function isoDateTimeInEventZone(date, time, state) {
 function stateFromAddress(address) {
   const match = String(address || "").match(/,\s*([A-Z]{2})\s+\d{5}/);
   return match ? match[1] : "";
+}
+
+async function findManagedRegionId(eventArea) {
+  try {
+    const records = await listRecords(REGIONS_TABLE, {
+      maxRecords: "1",
+      filterByFormula: `{Region Name} = '${escapeFormulaString(eventArea)}'`
+    });
+    const match = records[0];
+    if (!match || !["Approved", "Existing / Review"].includes(match.fields?.Status)) return null;
+    return match.id;
+  } catch (err) {
+    // Retain the established Event Area workflow if the new table is unavailable.
+    console.warn("Managed region lookup failed; continuing with legacy event area", err);
+    return null;
+  }
 }
 
 async function findStoreByPlaceId(placeId) {
@@ -187,6 +204,7 @@ exports.handler = async (event) => {
     }
 
     const storeRecordId = await findOrCreateStore(store);
+    const managedRegionId = await findManagedRegionId(eventArea);
     const eventName = `${brandName} @ ${store.name}`;
 
     const createdEvent = await createRecord(TABLES.EVENTS, {
@@ -195,13 +213,14 @@ exports.handler = async (event) => {
       "Store": [storeRecordId],
       "Event Date": eventDate,
       "Event Area": eventArea,
+      ...(managedRegionId ? { "Managed Operating Regions": [managedRegionId] } : {}),
       "Start Time": isoDateTimeInEventZone(eventDate, startTime, store.state || stateFromAddress(store.address)),
       "End Time": isoDateTimeInEventZone(eventDate, endTime, store.state || stateFromAddress(store.address)),
       "Hourly Rate": String(hourlyRate),
       "Status": publish ? "Requested" : "Draft",
       "Portal Visible": Boolean(publish),
       "Details": details || ""
-    });
+    }, { typecast: true });
 
     return {
       statusCode: 200,
