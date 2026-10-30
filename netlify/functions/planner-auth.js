@@ -8,7 +8,8 @@ function json(statusCode, body, cookie) {
     ...(cookie ? { "Set-Cookie": cookie } : {})
   }, body: JSON.stringify(body) };
 }
-exports.handler = async event => {
+function createHandler(initializeBlobs = connectLambda) {
+return async event => {
   if (event.httpMethod === "DELETE") return json(200, { ok: true }, secureCookie("", 0));
   if (!configured()) return json(503, { error: "Planner sign-in is not configured. Contact the administrator." });
   if (event.httpMethod === "GET") {
@@ -20,7 +21,7 @@ exports.handler = async event => {
   try {
     // Lambda-compatible functions need the Blobs request environment connected.
     // Without it, getStore() fails before passwords can be verified.
-    if (event.blobs) connectLambda(event);
+    initializeBlobs(event);
     const { email, password } = JSON.parse(event.body || "{}");
     const account = await authenticate(email, password);
     if (!account) return json(401, { error: "Invalid email or password." });
@@ -31,3 +32,6 @@ exports.handler = async event => {
     return json(503, { error: "Login service is temporarily unavailable. Please try again." });
   }
 };
+}
+exports.handler = createHandler();
+exports.__test = { createHandler };
