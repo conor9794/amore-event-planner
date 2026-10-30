@@ -1,10 +1,10 @@
 "use strict";
 const crypto = require("node:crypto");
-const { connectLambda } = require("@netlify/blobs");
+const { getStore: getAirtableResetStore } = require("./_planner-resets");
 const { verify, accounts, authenticate, secureCookie } = require("./_planner-auth");
 const credentials = require("./_planner-credentials");
 
-let resetStoreProvider = () => require("@netlify/blobs").getStore({ name: "amore-planner-operator-reset-v1", consistency: "strong" });
+let resetStoreProvider = getAirtableResetStore;
 const TTL_MS = 15 * 60 * 1000;
 const COOLDOWN_MS = 90 * 1000;
 function key(email) { return "reset/" + crypto.createHash("sha256").update(email).digest("hex"); }
@@ -74,7 +74,7 @@ async function resetPassword(email, token, password) {
   const data = entry?.data;
   if (!data || data.used || Date.now() >= data.expiresAt || !safeEqual(data.digest, digest(token)))
     return json(401, { error: "Reset link is invalid, expired, or already used." });
-  // Claim the one-use token atomically before changing the password.
+  // Mark token used before changing the password; already-used requests are rejected.
   const claimed = await store.setJSON(k, { ...data, used: true }, { onlyIfMatch: entry.etag });
   if (!claimed.modified) return json(401, { error: "Reset link has already been used." });
   await credentials.set(email, password);
@@ -92,7 +92,7 @@ async function changePassword(event, currentPassword, password) {
   await credentials.set(session.email, password);
   return json(200, { ok: true, message: "Password updated. Sign in again using your new password." }, true);
 }
-function createHandler(initializeBlobs = connectLambda) {
+function createHandler(initializeStorage = () => {}) {
 return async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed." });
   if (String(event.body || "").length > 3072) return json(413, { error: "Request is too large." });
@@ -104,9 +104,7 @@ return async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch (_) { return json(400, { error: "Invalid request." }); }
   if (!body || typeof body !== "object" || Array.isArray(body)) return json(400, { error: "Invalid request." });
   try {
-    // The planner still uses Lambda-compatible Netlify handlers.
-    // Connect the request context before accessing Blobs credentials or reset tokens.
-    initializeBlobs(event);
+    initializeStorage(event);
     if (body.action === "request") return await requestReset(normalize(body.email), event);
     if (body.action === "reset") return await resetPassword(normalize(body.email), body.token, body.newPassword);
     if (body.action === "change") return await changePassword(event, body.currentPassword, body.newPassword);
