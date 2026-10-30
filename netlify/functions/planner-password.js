@@ -86,8 +86,9 @@ async function changePassword(event, currentPassword, password) {
   if (!(await authenticate(session.email, currentPassword)))
     return json(401, { error: "Current password is incorrect." });
   if (currentPassword === password) return json(400, { error: "Choose a different password." });
-  await credentials.set(session.email, password);
+  // Cancel outstanding reset links before replacing credentials.
   await resetStoreProvider().delete(key(session.email));
+  await credentials.set(session.email, password);
   return json(200, { ok: true, message: "Password updated. Sign in again using your new password." }, true);
 }
 exports.handler = async (event) => {
