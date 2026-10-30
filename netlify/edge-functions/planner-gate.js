@@ -2,6 +2,7 @@
 // Only independently signed legacy recap relays are excluded; scheduled functions are not web-facing.
 const SKIP = new Set([
   "/api/planner-auth", "/.netlify/functions/planner-auth",
+  "/api/planner-login", "/.netlify/functions/planner-login",
   "/api/planner-password", "/.netlify/functions/planner-password",
   "/api/social-hour-recap-export", "/.netlify/functions/social-hour-recap-export",
   "/api/talkhouse-recap-export", "/.netlify/functions/talkhouse-recap-export"
