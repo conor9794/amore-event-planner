@@ -2,6 +2,7 @@
 // Only independently signed legacy recap relays are excluded; scheduled functions are not web-facing.
 const SKIP = new Set([
   "/api/planner-auth", "/.netlify/functions/planner-auth",
+  "/api/planner-password", "/.netlify/functions/planner-password",
   "/api/social-hour-recap-export", "/.netlify/functions/social-hour-recap-export",
   "/api/talkhouse-recap-export", "/.netlify/functions/talkhouse-recap-export"
 ]);
@@ -36,6 +37,7 @@ export default async function (request, context) {
   const path = url.pathname;
   if (SKIP.has(path)) return context.next();
   // Anonymous access to the standalone login screen, which contains no private data.
+  if (path === "/reset-password.html") return context.next();
   if (path === "/login.html") {
     if (await hasValidSession(request)) return Response.redirect(new URL("/", url), 302);
     return context.next();
